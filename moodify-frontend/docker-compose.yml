@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  moodify-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXT_PUBLIC_SPOTIFY_CLIENT_ID=${NEXT_PUBLIC_SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+    volumes:
+      # Mount public folder for face-api.js models
+      - ./public:/app/public:ro
+    networks:
+      - moodify-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Redis for session storage in production
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - moodify-network
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-moodify123}
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
+
+networks:
+  moodify-network:
+    driver: bridge

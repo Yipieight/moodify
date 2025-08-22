@@ -1,0 +1,37 @@
+# Terraform Backend Configuration
+# This file should be customized for your AWS account and S3 bucket
+
+terraform {
+  backend "s3" {
+    # Replace with your S3 bucket for Terraform state
+    bucket = "moodify-terraform-state"
+    key    = "prod/terraform.tfstate"
+    region = "us-east-1"
+    
+    # Replace with your DynamoDB table for state locking
+    dynamodb_table = "moodify-terraform-locks"
+    encrypt        = true
+    
+    # Optional: Use a specific profile
+    # profile = "your-aws-profile"
+  }
+}
+
+# Instructions for setting up the backend:
+# 1. Create an S3 bucket for Terraform state:
+#    aws s3 mb s3://moodify-terraform-state --region us-east-1
+#
+# 2. Enable versioning on the bucket:
+#    aws s3api put-bucket-versioning \
+#      --bucket moodify-terraform-state \
+#      --versioning-configuration Status=Enabled
+#
+# 3. Create a DynamoDB table for state locking:
+#    aws dynamodb create-table \
+#      --table-name moodify-terraform-locks \
+#      --attribute-definitions AttributeName=LockID,AttributeType=S \
+#      --key-schema AttributeName=LockID,KeyType=HASH \
+#      --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
+#
+# 4. Uncomment the backend configuration above and run:
+#    terraform init

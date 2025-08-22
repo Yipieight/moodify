@@ -1,0 +1,265 @@
+"use client"
+
+import { useSession } from "next-auth/react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
+import { MainLayout } from "@/components/layout/MainLayout"
+import { Loading } from "@/components/ui/Loading"
+import { RecommendationList } from "@/components/music/RecommendationList"
+import { MusicPlayer } from "@/components/music/MusicPlayer"
+import { useHistory } from "@/hooks/useHistory"
+import { EmotionType, Track, MusicRecommendation } from "@/types"
+import { 
+  ArrowLeftIcon, 
+  MusicalNoteIcon,
+  FaceSmileIcon,
+  ExclamationTriangleIcon 
+} from "@heroicons/react/24/outline"
+
+export default function RecommendationsPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { saveRecommendation } = useHistory()
+  
+  const [tracks, setTracks] = useState<Track[]>([])
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [savedToHistory, setSavedToHistory] = useState(false)
+
+  // Get emotion data from URL params
+  const emotion = searchParams.get('emotion') as EmotionType || 'neutral'
+  const confidence = parseFloat(searchParams.get('confidence') || '0.5')
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/login")
+    }
+  }, [status, router])
+
+  useEffect(() => {
+    if (status === "authenticated" && emotion) {
+      loadRecommendations()
+    }
+  }, [status, emotion])
+
+  const loadRecommendations = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/music/recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emotion,
+          confidence,
+          limit: 20
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to get recommendations')
+      }
+
+      const data = await response.json()
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to get recommendations')
+      }
+
+      setTracks(data.data.tracks || [])
+      
+      // Auto-save recommendation to history
+      await saveRecommendationToHistory(data.data.tracks || [])
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load recommendations'
+      setError(errorMessage)
+      console.error('Error loading recommendations:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const saveRecommendationToHistory = async (recommendedTracks: Track[]) => {
+    try {
+      const recommendation: MusicRecommendation = {
+        id: `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId: session?.user?.email || '',
+        emotion,
+        tracks: recommendedTracks,
+        createdAt: new Date()
+      }
+
+      await saveRecommendation(recommendation)
+      setSavedToHistory(true)
+    } catch (error) {
+      console.error('Failed to save recommendation to history:', error)
+      // Don't show error to user since this is background functionality
+    }
+  }
+
+  const handleTrackSelect = (track: Track) => {
+    setCurrentTrack(track)
+    setIsPlaying(true)
+  }
+
+  const handlePlay = () => {
+    setIsPlaying(true)
+  }
+
+  const handlePause = () => {
+    setIsPlaying(false)
+  }
+
+  const handleNext = () => {
+    if (!currentTrack || tracks.length === 0) return
+    
+    const currentIndex = tracks.findIndex(track => track.id === currentTrack.id)
+    const nextIndex = (currentIndex + 1) % tracks.length
+    setCurrentTrack(tracks[nextIndex])
+    setIsPlaying(true)
+  }
+
+  const handlePrevious = () => {
+    if (!currentTrack || tracks.length === 0) return
+    
+    const currentIndex = tracks.findIndex(track => track.id === currentTrack.id)
+    const previousIndex = currentIndex === 0 ? tracks.length - 1 : currentIndex - 1
+    setCurrentTrack(tracks[previousIndex])
+    setIsPlaying(true)
+  }
+
+  const goBack = () => {
+    router.back()
+  }
+
+  if (status === "loading") {
+    return (
+      <MainLayout>
+        <Loading message="Loading recommendations..." />
+      </MainLayout>
+    )
+  }
+
+  if (status === "unauthenticated") {
+    return null // Will redirect
+  }
+
+  return (
+    <MainLayout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={goBack}
+            className="inline-flex items-center text-purple-600 hover:text-purple-700 mb-4 transition-colors"
+          >
+            <ArrowLeftIcon className="w-4 h-4 mr-1" />
+            Back
+          </button>
+          
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <FaceSmileIcon className="w-6 h-6 text-purple-600" />
+              <span className="text-lg font-medium text-gray-700">
+                Feeling: <span className="capitalize font-semibold text-gray-900">{emotion}</span>
+              </span>
+            </div>
+            {savedToHistory && (
+              <div className="flex items-center space-x-1 text-green-600 text-sm">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Saved to history</span>
+              </div>
+            )}
+          </div>
+          
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Music Recommendations
+          </h1>
+          <p className="text-gray-600">
+            Discover music that matches your {emotion} mood
+          </p>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-8 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <ExclamationTriangleIcon className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
+              <div>
+                <h4 className="text-red-900 font-medium">Unable to Load Recommendations</h4>
+                <p className="text-red-700 text-sm mt-1">{error}</p>
+                <button
+                  onClick={loadRecommendations}
+                  className="mt-3 inline-flex items-center px-3 py-1 border border-red-300 rounded text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="inline-flex items-center space-x-2">
+              <MusicalNoteIcon className="w-6 h-6 text-purple-600 animate-pulse" />
+              <span className="text-lg text-gray-600">Finding perfect tracks for your mood...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Music Player */}
+        {currentTrack && !loading && (
+          <div className="mb-8">
+            <MusicPlayer
+              track={currentTrack}
+              isPlaying={isPlaying}
+              onPlay={handlePlay}
+              onPause={handlePause}
+              onNext={handleNext}
+              onPrevious={handlePrevious}
+            />
+          </div>
+        )}
+
+        {/* Recommendations List */}
+        {!loading && tracks.length > 0 && (
+          <RecommendationList
+            tracks={tracks}
+            onTrackSelect={handleTrackSelect}
+            loading={loading}
+          />
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && tracks.length === 0 && (
+          <div className="text-center py-12">
+            <MusicalNoteIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No Recommendations Found
+            </h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              We couldn't find any music recommendations for your current mood. Try analyzing your emotion again.
+            </p>
+            <button
+              onClick={() => router.push('/capture')}
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 transition-colors"
+            >
+              Analyze Emotion Again
+            </button>
+          </div>
+        )}
+      </div>
+    </MainLayout>
+  )
+}

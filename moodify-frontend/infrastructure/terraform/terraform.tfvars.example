@@ -1,0 +1,64 @@
+# Terraform Variables Configuration for MOODIFY
+# Copy this file to terraform.tfvars and customize the values
+
+# AWS Configuration
+aws_region = "us-east-1"
+environment = "prod"
+project_name = "moodify"
+
+# Network Configuration
+vpc_cidr = "10.0.0.0/16"
+
+# Container Configuration
+container_image = "ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/moodify:latest"
+container_port = 3000
+
+# ECS Configuration
+desired_count = 2
+min_capacity = 1
+max_capacity = 10
+cpu = 512
+memory = 1024
+
+# Environment Variables (non-sensitive)
+environment_variables = [
+  {
+    name  = "NODE_ENV"
+    value = "production"
+  },
+  {
+    name  = "PORT"
+    value = "3000"
+  },
+  {
+    name  = "HOSTNAME"
+    value = "0.0.0.0"
+  }
+]
+
+# Secrets (stored in AWS Secrets Manager)
+secrets = [
+  {
+    name      = "NEXTAUTH_SECRET"
+    valueFrom = "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:moodify/nextauth-secret"
+  },
+  {
+    name      = "NEXT_PUBLIC_SPOTIFY_CLIENT_ID"
+    valueFrom = "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:moodify/spotify-client-id"
+  },
+  {
+    name      = "SPOTIFY_CLIENT_SECRET"
+    valueFrom = "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:moodify/spotify-client-secret"
+  }
+]
+
+# Domain Configuration (optional)
+# domain_name = "moodify.yourdomain.com"
+# certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERTIFICATE_ID"
+
+# Monitoring Configuration
+enable_monitoring = true
+log_retention_days = 30
+
+# Replace ACCOUNT_ID with your actual AWS account ID
+# Replace CERTIFICATE_ID with your actual ACM certificate ID (if using custom domain)
