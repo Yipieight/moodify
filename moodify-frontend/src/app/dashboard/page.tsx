@@ -219,7 +219,7 @@ export default function DashboardPage() {
                   {/* Sentiment Overview */}
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Sentiment Balance</h4>
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-black ">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-green-600">Positive</span>
                         <span className="text-sm font-medium">{analytics.sentimentAnalysis?.positive || 0}%</span>
@@ -238,7 +238,7 @@ export default function DashboardPage() {
                   {/* Activity Patterns */}
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Activity Patterns</h4>
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-black ">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-600">Peak Day</span>
                         <span className="text-sm font-medium">{analytics.activityPatterns?.peakActivityDay || 'N/A'}</span>

@@ -48,16 +48,18 @@ export class SpotifyService {
 
   /**
    * Get emotion-to-genre mapping for music recommendations
+   * Using only verified Spotify genre seeds
    */
   private getEmotionGenres(emotion: EmotionType): string[] {
+    // Using only verified Spotify genre seeds
     const emotionGenreMap: Record<EmotionType, string[]> = {
-      happy: ['pop', 'dance', 'funk', 'disco', 'happy', 'upbeat'],
-      sad: ['acoustic', 'indie', 'sad', 'melancholy', 'blues', 'folk'],
-      angry: ['rock', 'metal', 'punk', 'hard-rock', 'aggressive'],
-      surprised: ['electronic', 'experimental', 'ambient', 'psychedelic'],
-      neutral: ['indie-pop', 'alternative', 'chill', 'lo-fi'],
-      fear: ['dark-ambient', 'gothic', 'industrial', 'dark'],
-      disgust: ['grunge', 'alternative-rock', 'noise', 'experimental']
+      happy: ['pop', 'dance', 'electronic', 'funk', 'disco'],
+      sad: ['acoustic', 'indie', 'blues', 'folk', 'country'],
+      angry: ['rock', 'metal', 'punk', 'alternative', 'grunge'],
+      surprised: ['electronic', 'ambient', 'techno', 'house', 'drum-and-bass'],
+      neutral: ['indie', 'alternative', 'pop', 'rock', 'folk'],
+      fear: ['ambient', 'classical', 'soundtrack', 'indie', 'alternative'],
+      disgust: ['grunge', 'alternative', 'rock', 'indie', 'punk']
     }
     
     return emotionGenreMap[emotion] || emotionGenreMap.neutral
@@ -147,40 +149,140 @@ export class SpotifyService {
   ): Promise<Track[]> {
     try {
       const accessToken = await this.getAccessToken()
-      const genres = this.getEmotionGenres(emotion)
-      const audioFeatures = this.getEmotionAudioFeatures(emotion)
       
-      // Use Spotify's recommendation endpoint
-      const seedGenres = genres.slice(0, 5).join(',') // Max 5 genres
-      const params = new URLSearchParams({
-        seed_genres: seedGenres,
-        limit: limit.toString(),
-        target_valence: audioFeatures.valence.toString(),
-        target_energy: audioFeatures.energy.toString(),
-        target_danceability: audioFeatures.danceability?.toString() || '0.5',
-        market: 'US'
-      })
-
-      const response = await fetch(
-        `https://api.spotify.com/v1/recommendations?${params}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        }
-      )
-
-      if (!response.ok) {
-        throw new Error(`Spotify API error: ${response.status}`)
+      // Try method 1: Recommendations API with genres
+      try {
+        return await this.getRecommendationsWithGenres(emotion, limit, accessToken)
+      } catch (genreError) {
+        console.warn('Genres method failed, trying search method:', genreError)
       }
-
-      const data: SpotifyRecommendationsResponse = await response.json()
-      return data.tracks.map(track => this.formatTrack(track))
+      
+      // Try method 2: Search API with emotion-based queries
+      try {
+        return await this.getRecommendationsWithSearch(emotion, limit, accessToken)
+      } catch (searchError) {
+        console.warn('Search method failed:', searchError)
+      }
+      
+      // Fallback: Return curated tracks
+      console.warn('All Spotify methods failed, using fallback recommendations')
+      return this.getFallbackRecommendations(emotion, limit)
+      
     } catch (error) {
       console.error('Error getting Spotify recommendations:', error)
-      // Return fallback recommendations
       return this.getFallbackRecommendations(emotion, limit)
     }
+  }
+  
+  /**
+   * Try to get recommendations using genres
+   */
+  private async getRecommendationsWithGenres(
+    emotion: EmotionType, 
+    limit: number, 
+    accessToken: string
+  ): Promise<Track[]> {
+    const genres = this.getEmotionGenres(emotion)
+    const audioFeatures = this.getEmotionAudioFeatures(emotion)
+    
+    // Use only first 3 genres to reduce chance of invalid combinations
+    const seedGenres = genres.slice(0, 3).join(',')
+    const params = new URLSearchParams({
+      seed_genres: seedGenres,
+      limit: limit.toString(),
+      target_valence: audioFeatures.valence.toString(),
+      target_energy: audioFeatures.energy.toString(),
+      market: 'US'
+    })
+
+    const response = await fetch(
+      `https://api.spotify.com/v1/recommendations?${params}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Spotify Recommendations API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: `https://api.spotify.com/v1/recommendations?${params}`,
+        error: errorText
+      })
+      throw new Error(`Spotify API error: ${response.status} - ${errorText}`)
+    }
+
+    const data: SpotifyRecommendationsResponse = await response.json()
+    return data.tracks.map(track => this.formatTrack(track))
+  }
+  
+  /**
+   * Try to get recommendations using search queries
+   */
+  private async getRecommendationsWithSearch(
+    emotion: EmotionType, 
+    limit: number, 
+    accessToken: string
+  ): Promise<Track[]> {
+    const searchQueries = this.getEmotionSearchQueries(emotion)
+    const tracks: Track[] = []
+    
+    for (const query of searchQueries) {
+      if (tracks.length >= limit) break
+      
+      try {
+        const params = new URLSearchParams({
+          q: query,
+          type: 'track',
+          limit: Math.min(10, limit - tracks.length).toString(),
+          market: 'US'
+        })
+
+        const response = await fetch(
+          `https://api.spotify.com/v1/search?${params}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          }
+        )
+
+        if (response.ok) {
+          const data: SpotifySearchResponse = await response.json()
+          const searchTracks = data.tracks.items.map(track => this.formatTrack(track))
+          tracks.push(...searchTracks)
+        }
+      } catch (error) {
+        console.warn(`Search query "${query}" failed:`, error)
+      }
+    }
+    
+    if (tracks.length === 0) {
+      throw new Error('No tracks found through search')
+    }
+    
+    return tracks.slice(0, limit)
+  }
+  
+  /**
+   * Get search queries for emotions
+   */
+  private getEmotionSearchQueries(emotion: EmotionType): string[] {
+    const queryMap: Record<EmotionType, string[]> = {
+      happy: ['happy music', 'upbeat songs', 'feel good hits', 'dance music'],
+      sad: ['sad songs', 'melancholy music', 'heartbreak songs', 'emotional ballads'],
+      angry: ['rock music', 'metal songs', 'aggressive music', 'punk rock'],
+      surprised: ['electronic music', 'experimental songs', 'unique music', 'ambient'],
+      neutral: ['chill music', 'relaxing songs', 'indie music', 'background music'],
+      fear: ['calm music', 'soothing songs', 'peaceful music', 'meditation'],
+      disgust: ['alternative music', 'grunge songs', 'underground music', 'indie rock']
+    }
+    
+    return queryMap[emotion] || queryMap.neutral
   }
 
   /**

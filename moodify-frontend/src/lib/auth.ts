@@ -1,15 +1,57 @@
 import NextAuth, { NextAuthOptions } from "next-auth"
 import EmailProvider from "next-auth/providers/email"
+import CredentialsProvider from "next-auth/providers/credentials"
 import SpotifyProvider from "next-auth/providers/spotify"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-
-// Note: You'll need to implement the Prisma client when setting up the database
-// For now, we'll comment it out and use the default adapter
-// import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
+import bcrypt from "bcryptjs"
 
 const authOptions: NextAuthOptions = {
-  // adapter: PrismaAdapter(prisma), // Uncomment when Prisma is set up
+  adapter: PrismaAdapter(prisma),
   providers: [
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
+
+        try {
+          const user = await prisma.users.findUnique({
+            where: {
+              email: credentials.email,
+            },
+          })
+
+          if (!user || !user.password) {
+            return null
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          )
+
+          if (!isPasswordValid) {
+            return null
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+          }
+        } catch (error) {
+          console.error("Auth error:", error)
+          return null
+        }
+      },
+    }),
     EmailProvider({
       server: {
         host: process.env.EMAIL_SERVER_HOST,

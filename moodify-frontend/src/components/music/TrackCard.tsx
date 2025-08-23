@@ -160,7 +160,7 @@ export function TrackCard({
           )}
 
           {/* Play/Pause Overlay */}
-          <div className={`absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center transition-opacity ${
+          <div className={`absolute inset-0 bg-purple-900 bg-opacity-60 rounded-lg flex items-center justify-center transition-opacity ${
             isHovered || isCurrentTrack ? 'opacity-100' : 'opacity-0'
           }`}>
             <button

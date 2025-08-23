@@ -177,7 +177,7 @@ export function WebcamCapture({
             id="camera-select"
             value={selectedDevice}
             onChange={(e) => setSelectedDevice(e.target.value)}
-            className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
           >
             {devices.map((device, index) => (
               <option key={device.deviceId} value={device.deviceId}>
@@ -189,7 +189,7 @@ export function WebcamCapture({
       )}
 
       {/* Webcam Container */}
-      <div className="relative bg-black rounded-lg overflow-hidden">
+      <div className="relative bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg overflow-hidden">
         <Webcam
           ref={webcamRef}
           audio={false}
@@ -205,7 +205,7 @@ export function WebcamCapture({
 
         {/* Overlay for capturing state */}
         {isCapturing && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-purple-900 bg-opacity-75 flex items-center justify-center">
             <div className="text-white text-center">
               <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-lg font-semibold">Capturing...</p>
@@ -216,7 +216,12 @@ export function WebcamCapture({
         {/* Face detection guidance overlay */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="w-48 h-48 border-2 border-white border-dashed rounded-full opacity-30"></div>
+            <div className="w-48 h-48 border-2 border-purple-400 border-dashed rounded-full opacity-60"></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-purple-600">
+              <div className="text-center">
+                <div className="text-xs font-medium bg-white bg-opacity-90 px-2 py-1 rounded-full">Position your face here</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

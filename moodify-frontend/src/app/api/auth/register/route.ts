@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import bcrypt from "bcryptjs"
+import { prisma } from "@/lib/prisma"
 
 const registerSchema = z.object({
   name: z.string().min(2).max(50),
@@ -22,33 +24,39 @@ export async function POST(request: NextRequest) {
 
     const { name, email, password } = validationResult.data
 
-    // TODO: Implement actual user registration logic here
-    // For now, we'll simulate a successful registration
-    
-    // In a real implementation, you would:
-    // 1. Check if user already exists
-    // 2. Hash the password
-    // 3. Save user to database
-    // 4. Send verification email (optional)
-    
-    // Simulate checking if user exists
-    if (email === "test@example.com") {
+    // Check if user already exists
+    const existingUser = await prisma.users.findUnique({
+      where: { email },
+    })
+
+    if (existingUser) {
       return NextResponse.json(
         { message: "User with this email already exists" },
         { status: 409 }
       )
     }
 
-    // Simulate successful registration
-    console.log("User registration simulated:", { name, email })
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12)
+
+    // Create user
+    const user = await prisma.users.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+      },
+    })
+
+    console.log("User registered successfully:", { id: user.id, name, email })
 
     return NextResponse.json(
       { 
         message: "User registered successfully",
         user: {
-          id: "temp-id-" + Date.now(),
-          name,
-          email,
+          id: user.id,
+          name: user.name,
+          email: user.email,
         }
       },
       { status: 201 }

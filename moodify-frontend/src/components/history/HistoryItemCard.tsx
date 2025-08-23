@@ -85,7 +85,11 @@ export function HistoryItemCard({
     </div>
   )
 
-  const renderRecommendationDetails = (recommendation: MusicRecommendation) => (
+  const renderRecommendationDetails = (recommendation: MusicRecommendation) => {
+    // Ensure tracks array exists and has proper structure
+    const tracks = recommendation.tracks || []
+    
+    return (
     <div className="space-y-3">
       <div className="flex items-center space-x-3">
         <MusicalNoteIcon className="h-6 w-6 text-green-500" />
@@ -101,24 +105,24 @@ export function HistoryItemCard({
 
       <div className="ml-9">
         <p className="text-sm text-gray-600 mb-2">
-          {recommendation.tracks.length} tracks recommended
+          {tracks.length} tracks recommended
         </p>
         
-        {!expanded && recommendation.tracks.length > 0 && (
+        {!expanded && tracks.length > 0 && (
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <span>Top track:</span>
             <span className="font-medium text-gray-900">
-              {recommendation.tracks[0].name} by {recommendation.tracks[0].artist}
+              {tracks[0].name} by {tracks[0].artist}
             </span>
           </div>
         )}
 
-        {expanded && (
+        {expanded && tracks.length > 0 && (
           <div className="space-y-2 mt-3">
             <h4 className="text-sm font-medium text-gray-900">All Recommended Tracks:</h4>
             <div className="space-y-2 max-h-40 overflow-y-auto">
-              {recommendation.tracks.map((track, index) => (
-                <div key={track.id} className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+              {tracks.map((track, index) => (
+                <div key={track.id || index} className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
                   {track.imageUrl && (
                     <img 
                       src={track.imageUrl} 
@@ -128,10 +132,10 @@ export function HistoryItemCard({
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
-                      {track.name}
+                      {track.name || 'Unknown Track'}
                     </p>
                     <p className="text-xs text-gray-600 truncate">
-                      {track.artist} • {track.album}
+                      {track.artist || 'Unknown Artist'} • {track.album || 'Unknown Album'}
                     </p>
                   </div>
                   {track.previewUrl && (
@@ -150,9 +154,15 @@ export function HistoryItemCard({
             </div>
           </div>
         )}
+        
+        {expanded && tracks.length === 0 && (
+          <div className="text-sm text-gray-500 mt-3">
+            No tracks available for this recommendation.
+          </div>
+        )}
       </div>
     </div>
-  )
+  )}
 
   const data = item.type === 'emotion' 
     ? item.data as EmotionResult 

@@ -97,7 +97,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
             id="email"
             autoComplete="email"
             className={
-              `w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${
+              `w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-gray-900 placeholder-gray-500 ${
                 errors.email ? "border-red-500" : "border-gray-300"
               }`
             }
@@ -120,7 +120,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
               id="password"
               autoComplete="current-password"
               className={
-                `w-full px-3 py-2 pr-10 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${
+                `w-full px-3 py-2 pr-10 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-gray-900 placeholder-gray-500 ${
                   errors.password ? "border-red-500" : "border-gray-300"
                 }`
               }

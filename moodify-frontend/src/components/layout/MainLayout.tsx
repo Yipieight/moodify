@@ -13,7 +13,7 @@ export function MainLayout({ children, className = "" }: MainLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
-      <main className={`flex-grow ${className}`}>
+      <main className={`flex-grow bg-white ${className}`}>
         {children}
       </main>
       <Footer />

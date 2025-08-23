@@ -2,16 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { EmotionType } from '@/types'
-
-// This would typically be imported from a shared data store
-// For now, we'll simulate accessing the same storage as the main history route
-let historyStorage: any[] = []
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -20,28 +17,46 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const timeRange = searchParams.get('timeRange') || '30' // days
-    const userId = session.user.email
+    const userId = session.user.id
 
     // Calculate date range
     const endDate = new Date()
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - parseInt(timeRange))
 
-    // Filter user's history within time range
-    const userHistory = historyStorage.filter(entry => 
-      entry.userId === userId &&
-      entry.createdAt >= startDate &&
-      entry.createdAt <= endDate
-    )
+    // Get emotion analyses from database
+    const emotionEntries = await prisma.emotion_analyses.findMany({
+      where: {
+        user_id: userId,
+        created_at: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    })
 
-    // Separate emotion and recommendation entries
-    const emotionEntries = userHistory.filter(entry => entry.type === 'emotion')
-    const recommendationEntries = userHistory.filter(entry => entry.type === 'recommendation')
+    // Get music recommendations from database
+    const recommendationEntries = await prisma.music_recommendations.findMany({
+      where: {
+        user_id: userId,
+        created_at: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    })
+
+    // Get user statistics (automatically maintained by database triggers)
+    const userStats = await prisma.user_statistics.findUnique({
+      where: { user_id: userId }
+    })
 
     // Calculate analytics
     const analytics = {
-      totalAnalyses: emotionEntries.length,
-      totalRecommendations: recommendationEntries.length,
+      totalAnalyses: userStats?.total_analyses || emotionEntries.length,
+      totalRecommendations: userStats?.total_recommendations || recommendationEntries.length,
       averageAnalysesPerDay: emotionEntries.length / parseInt(timeRange),
       
       // Emotion distribution
@@ -63,7 +78,7 @@ export async function GET(request: NextRequest) {
       musicPreferences: calculateMusicPreferences(recommendationEntries),
       
       // Activity patterns
-      activityPatterns: calculateActivityPatterns(userHistory)
+      activityPatterns: calculateActivityPatterns([...emotionEntries, ...recommendationEntries])
     }
 
     return NextResponse.json({
@@ -91,8 +106,8 @@ function calculateEmotionDistribution(emotionEntries: any[]): Record<EmotionType
   }
 
   emotionEntries.forEach(entry => {
-    if (entry.data?.emotion) {
-      distribution[entry.data.emotion as EmotionType]++
+    if (entry.emotion) {
+      distribution[entry.emotion as EmotionType]++
     }
   })
 
@@ -127,7 +142,7 @@ function calculateSentimentAnalysis(emotionEntries: any[]): {
   let neutral = 0
 
   emotionEntries.forEach(entry => {
-    const emotion = entry.data?.emotion
+    const emotion = entry.emotion
     if (positiveEmotions.includes(emotion)) {
       positive++
     } else if (negativeEmotions.includes(emotion)) {
@@ -153,8 +168,17 @@ function calculateWeeklyData(emotionEntries: any[], timeRange: number): Array<{
   const weeks: { [key: string]: { count: number, emotions: Record<EmotionType, number> } } = {}
   
   emotionEntries.forEach(entry => {
-    const date = new Date(entry.createdAt)
+    // Ensure we have a valid date
+    if (!entry.created_at) return
+    
+    const date = new Date(entry.created_at)
+    // Check if date is valid
+    if (isNaN(date.getTime())) return
+    
     const weekStart = getWeekStart(date)
+    // Check if weekStart is valid
+    if (isNaN(weekStart.getTime())) return
+    
     const weekKey = weekStart.toISOString().split('T')[0]
     
     if (!weeks[weekKey]) {
@@ -168,8 +192,8 @@ function calculateWeeklyData(emotionEntries: any[], timeRange: number): Array<{
     }
     
     weeks[weekKey].count++
-    if (entry.data?.emotion) {
-      weeks[weekKey].emotions[entry.data.emotion as EmotionType]++
+    if (entry.emotion) {
+      weeks[weekKey].emotions[entry.emotion as EmotionType]++
     }
   })
 
@@ -188,10 +212,17 @@ function calculateDailyTrends(emotionEntries: any[], timeRange: number): Array<{
   const days: { [key: string]: { count: number, emotions: Record<EmotionType, number> } } = {}
   
   emotionEntries.forEach(entry => {
-    const date = new Date(entry.createdAt).toISOString().split('T')[0]
+    // Ensure we have a valid date
+    if (!entry.created_at) return
     
-    if (!days[date]) {
-      days[date] = {
+    const date = new Date(entry.created_at)
+    // Check if date is valid
+    if (isNaN(date.getTime())) return
+    
+    const dateKey = date.toISOString().split('T')[0]
+    
+    if (!days[dateKey]) {
+      days[dateKey] = {
         count: 0,
         emotions: {
           happy: 0, sad: 0, angry: 0, surprised: 0,
@@ -200,9 +231,9 @@ function calculateDailyTrends(emotionEntries: any[], timeRange: number): Array<{
       }
     }
     
-    days[date].count++
-    if (entry.data?.emotion) {
-      days[date].emotions[entry.data.emotion as EmotionType]++
+    days[dateKey].count++
+    if (entry.emotion) {
+      days[dateKey].emotions[entry.emotion as EmotionType]++
     }
   })
 
@@ -278,7 +309,13 @@ function calculateActivityPatterns(allEntries: any[]): {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
   allEntries.forEach(entry => {
-    const date = new Date(entry.createdAt)
+    // Ensure we have a valid date
+    if (!entry.created_at) return
+    
+    const date = new Date(entry.created_at)
+    // Check if date is valid
+    if (isNaN(date.getTime())) return
+    
     const hour = date.getHours()
     const dayOfWeek = date.getDay()
     

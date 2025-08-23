@@ -20,6 +20,7 @@ interface MusicPlayerProps {
   onPause: () => void
   onNext: () => void
   onPrevious: () => void
+  onEnded?: () => void // Callback opcional para manejar el final de la canción
   onVolumeChange?: (volume: number) => void
   showPlaylist?: boolean
   className?: string
@@ -32,6 +33,7 @@ export function MusicPlayer({
   onPause,
   onNext,
   onPrevious,
+  onEnded,
   onVolumeChange,
   showPlaylist = false,
   className = ""
@@ -89,7 +91,11 @@ export function MusicPlayer({
   }
 
   const handleEnded = () => {
-    onNext()
+    if (onEnded) {
+      onEnded() // Usar el callback personalizado si está disponible
+    } else {
+      onNext() // Comportamiento por defecto
+    }
   }
 
   const handleLoadStart = () => {

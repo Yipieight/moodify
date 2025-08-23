@@ -66,7 +66,7 @@ export function Footer() {
               © 2025 Moodify. Built as part of Web Programming course project.
             </p>
             <p className="text-sm text-gray-600 mt-2 md:mt-0">
-              Universidad de Costa Rica - Ingeniería en Informática
+              Universidad Rafael Landivar - Ingeniería en Informática
             </p>
           </div>
         </div>

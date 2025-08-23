@@ -47,6 +47,7 @@ export function RecommendationList({
   const [sortBy, setSortBy] = useState<SortOption>('popularity')
   const [filterBy, setFilterBy] = useState<FilterOption>('all')
   const [likedTracks, setLikedTracks] = useState<Set<string>>(new Set())
+  const [isPlaylistMode, setIsPlaylistMode] = useState(false) // Para reproducción automática continua
 
   // Filter and sort tracks
   const filteredAndSortedTracks = useMemo(() => {
@@ -111,6 +112,10 @@ export function RecommendationList({
     
     if (nextTrack) {
       handleTrackPlay(nextTrack)
+    } else if (isPlaylistMode) {
+      // Si es el último track en modo playlist, detener
+      setIsPlaying(false)
+      setIsPlaylistMode(false)
     }
   }
 
@@ -146,7 +151,17 @@ export function RecommendationList({
 
   const playAll = () => {
     if (filteredAndSortedTracks.length > 0) {
+      setIsPlaylistMode(true) // Activar modo lista de reproducción
       handleTrackPlay(filteredAndSortedTracks[0])
+    }
+  }
+
+  // Función para manejar cuando termina una canción (auto-next)
+  const handleTrackEnd = () => {
+    if (isPlaylistMode) {
+      handleNext() // Automáticamente reproduce la siguiente
+    } else {
+      setIsPlaying(false)
     }
   }
 
@@ -191,10 +206,18 @@ export function RecommendationList({
           <button
             onClick={playAll}
             disabled={filteredAndSortedTracks.length === 0}
-            className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              isPlaylistMode 
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : 'bg-purple-600 hover:bg-purple-700 text-white disabled:bg-gray-400'
+            }`}
           >
-            <PlayIcon className="w-4 h-4" />
-            <span>Play All</span>
+            {isPlaylistMode ? (
+              <QueueListIcon className="w-4 h-4" />
+            ) : (
+              <PlayIcon className="w-4 h-4" />
+            )}
+            <span>{isPlaylistMode ? 'Playing All' : 'Play All'}</span>
           </button>
           
           <button
@@ -205,6 +228,19 @@ export function RecommendationList({
             <ArrowPathIcon className="w-4 h-4" />
             <span>Shuffle</span>
           </button>
+          
+          {isPlaylistMode && (
+            <button
+              onClick={() => {
+                setIsPlaylistMode(false)
+                setIsPlaying(false)
+              }}
+              className="flex items-center space-x-2 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg font-medium transition-colors"
+            >
+              <PauseIcon className="w-4 h-4" />
+              <span>Stop</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -220,7 +256,7 @@ export function RecommendationList({
                 placeholder="Search tracks, artists, or albums..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 placeholder-gray-500"
               />
             </div>
           </div>
@@ -229,7 +265,7 @@ export function RecommendationList({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
           >
             <option value="popularity">Sort by Popularity</option>
             <option value="name">Sort by Name</option>
@@ -241,7 +277,7 @@ export function RecommendationList({
           <select
             value={filterBy}
             onChange={(e) => setFilterBy(e.target.value as FilterOption)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
           >
             <option value="all">All Tracks</option>
             <option value="with-preview">With Preview</option>
@@ -318,6 +354,8 @@ export function RecommendationList({
             onPause={handlePause}
             onNext={handleNext}
             onPrevious={handlePrevious}
+            onEnded={handleTrackEnd} // Nueva funcionalidad para auto-next
+            className="shadow-lg"
           />
         </div>
       )}

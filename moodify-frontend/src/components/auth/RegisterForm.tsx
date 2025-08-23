@@ -14,7 +14,7 @@ const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(50, "Name must be less than 50 characters"),
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)/, "Password must contain at least one uppercase letter, one lowercase letter, and one number"),
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter, one lowercase letter, and one number"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don&apos;t match",
@@ -111,8 +111,8 @@ export function RegisterForm({ onSuccess, onError }: RegisterFormProps) {
     if (password.length >= 8) strength++
     if (/[a-z]/.test(password)) strength++
     if (/[A-Z]/.test(password)) strength++
-    if (/\\d/.test(password)) strength++
-    if (/[^\\w\\s]/.test(password)) strength++
+    if (/\d/.test(password)) strength++
+    if (/[^\w\s]/.test(password)) strength++
     
     const strengthTexts = ["Very Weak", "Weak", "Fair", "Good", "Strong"]
     const strengthColors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"]
@@ -140,7 +140,7 @@ export function RegisterForm({ onSuccess, onError }: RegisterFormProps) {
             id="name"
             autoComplete="name"
             className={
-              `w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${
+              `w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-gray-900 placeholder-gray-500 ${
                 errors.name ? "border-red-500" : "border-gray-300"
               }`
             }
@@ -162,7 +162,7 @@ export function RegisterForm({ onSuccess, onError }: RegisterFormProps) {
             id="email"
             autoComplete="email"
             className={
-              `w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${
+              `w-full px-3 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-gray-900 placeholder-gray-500 ${
                 errors.email ? "border-red-500" : "border-gray-300"
               }`
             }
@@ -185,7 +185,7 @@ export function RegisterForm({ onSuccess, onError }: RegisterFormProps) {
               id="password"
               autoComplete="new-password"
               className={
-                `w-full px-3 py-2 pr-10 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${
+                `w-full px-3 py-2 pr-10 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-gray-900 placeholder-gray-500 ${
                   errors.password ? "border-red-500" : "border-gray-300"
                 }`
               }
@@ -236,7 +236,7 @@ export function RegisterForm({ onSuccess, onError }: RegisterFormProps) {
               id="confirmPassword"
               autoComplete="new-password"
               className={
-                `w-full px-3 py-2 pr-10 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors ${
+                `w-full px-3 py-2 pr-10 border rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-gray-900 placeholder-gray-500 ${
                   errors.confirmPassword ? "border-red-500" : "border-gray-300"
                 }`
               }

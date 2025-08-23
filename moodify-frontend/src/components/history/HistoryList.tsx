@@ -146,20 +146,26 @@ export function HistoryList({ className = '' }: HistoryListProps) {
   const filteredHistory = history.filter(item => {
     if (!searchQuery) return true
     
-    const query = searchQuery.toLowerCase()
-    
-    if (item.type === 'emotion') {
-      const emotion = item.data as EmotionResult
-      return emotion.emotion.toLowerCase().includes(query)
-    } else {
-      const recommendation = item.data as MusicRecommendation
-      return (
-        recommendation.emotion.toLowerCase().includes(query) ||
-        recommendation.tracks.some(track => 
-          track.name.toLowerCase().includes(query) ||
-          track.artist.toLowerCase().includes(query)
+    try {
+      const query = searchQuery.toLowerCase()
+      
+      if (item.type === 'emotion') {
+        const emotion = item.data as EmotionResult
+        return emotion?.emotion?.toLowerCase().includes(query)
+      } else {
+        const recommendation = item.data as MusicRecommendation
+        const tracks = recommendation?.tracks || []
+        return (
+          recommendation?.emotion?.toLowerCase().includes(query) ||
+          tracks.some(track => 
+            track?.name?.toLowerCase().includes(query) ||
+            track?.artist?.toLowerCase().includes(query)
+          )
         )
-      )
+      }
+    } catch (err) {
+      console.warn('Error filtering history item:', item, err)
+      return false
     }
   })
 
@@ -196,7 +202,7 @@ export function HistoryList({ className = '' }: HistoryListProps) {
                 placeholder="Search your history..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="block text-black w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
           </div>
