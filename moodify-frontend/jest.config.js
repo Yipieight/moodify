@@ -9,7 +9,17 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
-  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
+  testPathIgnorePatterns: [
+    '<rootDir>/.next/',
+    '<rootDir>/node_modules/',
+    '<rootDir>/src/__tests__/fixtures/',
+    '<rootDir>/src/__tests__/mocks/',
+    '<rootDir>/src/__tests__/utils/',
+  ],
+  testMatch: [
+    '**/__tests__/**/*.test.{js,jsx,ts,tsx}',
+    '**/*.test.{js,jsx,ts,tsx}',
+  ],
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
@@ -23,7 +33,7 @@ const customJestConfig = {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
   },
   transformIgnorePatterns: [
-    '/node_modules/',
+    '/node_modules/(?!(@auth/prisma-adapter)/)',
     '^.+\\.module\\.(css|sass|scss)$',
   ],
 }

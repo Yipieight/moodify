@@ -101,38 +101,44 @@ jest.mock('react-chartjs-2', () => ({
 }))
 
 // Mock window objects that might not exist in test environment
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-})
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(), // deprecated
+      removeListener: jest.fn(), // deprecated
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  })
+}
 
 // Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
-  constructor(cb) {
-    this.cb = cb
+if (typeof global.ResizeObserver === 'undefined') {
+  global.ResizeObserver = class ResizeObserver {
+    constructor(cb) {
+      this.cb = cb
+    }
+    observe() { }
+    unobserve() { }
+    disconnect() { }
   }
-  observe() { }
-  unobserve() { }
-  disconnect() { }
 }
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
-  constructor(cb) {
-    this.cb = cb
+if (typeof global.IntersectionObserver === 'undefined') {
+  global.IntersectionObserver = class IntersectionObserver {
+    constructor(cb) {
+      this.cb = cb
+    }
+    observe() { }
+    unobserve() { }
+    disconnect() { }
   }
-  observe() { }
-  unobserve() { }
-  disconnect() { }
 }
 
 // Global test utilities
