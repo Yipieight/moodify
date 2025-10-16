@@ -43,10 +43,10 @@ jest.mock('face-api.js', () => ({
 jest.mock('react-webcam', () => {
   return {
     __esModule: true,
-    default: jest.fn(({ children, ...props }) => 
-      React.createElement('div', { 
+    default: jest.fn(({ children, ...props }) =>
+      React.createElement('div', {
         'data-testid': 'webcam-mock',
-        ...props 
+        ...props
       }, children)
     ),
   }
@@ -70,29 +70,29 @@ jest.mock('chart.js', () => ({
 
 // Mock react-chartjs-2
 jest.mock('react-chartjs-2', () => ({
-  Line: jest.fn(({ data, options }) => 
-    React.createElement('div', { 
+  Line: jest.fn(({ data, options }) =>
+    React.createElement('div', {
       'data-testid': 'line-chart',
       'data-chart-data': JSON.stringify(data),
       'data-chart-options': JSON.stringify(options)
     })
   ),
-  Bar: jest.fn(({ data, options }) => 
-    React.createElement('div', { 
+  Bar: jest.fn(({ data, options }) =>
+    React.createElement('div', {
       'data-testid': 'bar-chart',
       'data-chart-data': JSON.stringify(data),
       'data-chart-options': JSON.stringify(options)
     })
   ),
-  Doughnut: jest.fn(({ data, options }) => 
-    React.createElement('div', { 
+  Doughnut: jest.fn(({ data, options }) =>
+    React.createElement('div', {
       'data-testid': 'doughnut-chart',
       'data-chart-data': JSON.stringify(data),
       'data-chart-options': JSON.stringify(options)
     })
   ),
-  PolarArea: jest.fn(({ data, options }) => 
-    React.createElement('div', { 
+  PolarArea: jest.fn(({ data, options }) =>
+    React.createElement('div', {
       'data-testid': 'polar-area-chart',
       'data-chart-data': JSON.stringify(data),
       'data-chart-options': JSON.stringify(options)
@@ -120,9 +120,9 @@ global.ResizeObserver = class ResizeObserver {
   constructor(cb) {
     this.cb = cb
   }
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe() { }
+  unobserve() { }
+  disconnect() { }
 }
 
 // Mock IntersectionObserver
@@ -130,9 +130,9 @@ global.IntersectionObserver = class IntersectionObserver {
   constructor(cb) {
     this.cb = cb
   }
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe() { }
+  unobserve() { }
+  disconnect() { }
 }
 
 // Global test utilities

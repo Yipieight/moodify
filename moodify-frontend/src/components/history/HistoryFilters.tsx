@@ -40,6 +40,7 @@ export function HistoryFilters({ filters, onFiltersChange }: HistoryFiltersProps
   const handleApplyFilters = () => {
     const updatedFilters: Partial<HistoryFiltersType> = {
       type: localFilters.type === 'all' ? undefined : localFilters.type as 'emotion' | 'recommendation',
+      emotion: localFilters.emotion ? localFilters.emotion as EmotionType : undefined,
       startDate: localFilters.startDate ? new Date(localFilters.startDate) : undefined,
       endDate: localFilters.endDate ? new Date(localFilters.endDate) : undefined,
       limit: localFilters.limit,
@@ -61,6 +62,7 @@ export function HistoryFilters({ filters, onFiltersChange }: HistoryFiltersProps
     setLocalFilters(resetFilters)
     onFiltersChange({
       type: undefined,
+      emotion: undefined,
       startDate: undefined,
       endDate: undefined,
       limit: 20,
@@ -96,33 +98,33 @@ export function HistoryFilters({ filters, onFiltersChange }: HistoryFiltersProps
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Content Type Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Content Type
           </label>
           <select
             value={localFilters.type}
             onChange={(e) => setLocalFilters(prev => ({ ...prev, type: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
           >
-            <option value="all">All Types</option>
-            <option value="emotion">Emotions Only</option>
-            <option value="recommendation">Recommendations Only</option>
+            <option value="all" className="text-gray-900">All Types</option>
+            <option value="emotion" className="text-gray-900">Emotions Only</option>
+            <option value="recommendation" className="text-gray-900">Recommendations Only</option>
           </select>
         </div>
 
         {/* Emotion Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Specific Emotion
           </label>
           <select
             value={localFilters.emotion}
             onChange={(e) => setLocalFilters(prev => ({ ...prev, emotion: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
           >
-            <option value="">All Emotions</option>
+            <option value="" className="text-gray-900">All Emotions</option>
             {emotionOptions.map(option => (
-              <option key={option.value} value={option.value}>
+              <option key={option.value} value={option.value} className="text-gray-900">
                 {option.label}
               </option>
             ))}
@@ -131,15 +133,15 @@ export function HistoryFilters({ filters, onFiltersChange }: HistoryFiltersProps
 
         {/* Quick Time Range */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Time Range
           </label>
           <select
             onChange={(e) => handleTimeRangeChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
           >
             {timeRangeOptions.map(option => (
-              <option key={option.value} value={option.value}>
+              <option key={option.value} value={option.value} className="text-gray-900">
                 {option.label}
               </option>
             ))}
@@ -148,18 +150,18 @@ export function HistoryFilters({ filters, onFiltersChange }: HistoryFiltersProps
 
         {/* Items per page */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Items per page
           </label>
           <select
             value={localFilters.limit}
             onChange={(e) => setLocalFilters(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
           >
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
+            <option value={10} className="text-gray-900">10</option>
+            <option value={20} className="text-gray-900">20</option>
+            <option value={50} className="text-gray-900">50</option>
+            <option value={100} className="text-gray-900">100</option>
           </select>
         </div>
       </div>
@@ -167,26 +169,26 @@ export function HistoryFilters({ filters, onFiltersChange }: HistoryFiltersProps
       {/* Custom Date Range */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Start Date
           </label>
           <input
             type="date"
             value={localFilters.startDate}
             onChange={(e) => setLocalFilters(prev => ({ ...prev, startDate: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             End Date
           </label>
           <input
             type="date"
             value={localFilters.endDate}
             onChange={(e) => setLocalFilters(prev => ({ ...prev, endDate: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
           />
         </div>
       </div>
@@ -195,7 +197,7 @@ export function HistoryFilters({ filters, onFiltersChange }: HistoryFiltersProps
       <div className="flex justify-end space-x-3 pt-4">
         <button
           onClick={handleResetFilters}
-          className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
           Reset
         </button>

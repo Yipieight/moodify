@@ -129,6 +129,7 @@ class HistoryService {
     const params = new URLSearchParams()
     
     if (filters.type) params.append('type', filters.type)
+    if (filters.emotion) params.append('emotion', filters.emotion)
     if (filters.startDate) params.append('startDate', filters.startDate.toISOString())
     if (filters.endDate) params.append('endDate', filters.endDate.toISOString())
     if (filters.limit) params.append('limit', filters.limit.toString())
