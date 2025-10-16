@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Line, Doughnut } from 'react-chartjs-2'
 import { 
   lineChartOptions, 
   doughnutChartOptions, 
   emotionColors,
-  generateEmotionChartData,
-  generateMultiLineData 
+  generateEmotionChartData
 } from '@/lib/chartConfig'
 import { EmotionType } from '@/types'
 import { Loading } from '@/components/ui/Loading'
@@ -48,40 +47,111 @@ export function EmotionTrendsChart({
     { value: 365, label: 'Last year' }
   ]
 
-  // Generate line chart data for daily trends
+  // Generate line chart data for daily trends (single-line aggregated timeline)
   const generateDailyTrendsData = () => {
-    if (!data?.dailyTrends) return null
+    if (!data?.dailyTrends || data.dailyTrends.length === 0) return null
 
-    const emotions: EmotionType[] = ['happy', 'sad', 'angry', 'surprised', 'neutral', 'fear', 'disgust']
-    
-    // Create a map of dates to emotion counts
-    const dateMap = new Map<string, Record<EmotionType, number>>()
-    
-    data.dailyTrends.forEach(trend => {
-      const emotionCounts = emotions.reduce((acc, emotion) => {
-        acc[emotion] = 0
-        return acc
-      }, {} as Record<EmotionType, number>)
-      
-      emotionCounts[trend.primaryEmotion] = trend.count
-      dateMap.set(trend.date, emotionCounts)
+    // Sort trends chronologically
+    const sortedTrends = [...data.dailyTrends].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    )
+
+    // Format date labels for x-axis
+    const labels = sortedTrends.map(trend => {
+      try {
+        const date = new Date(trend.date)
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      } catch (error) {
+        console.warn('Invalid date format:', trend.date)
+        return trend.date
+      }
     })
 
-    // Convert to array format for chart
-    const chartData = Array.from(dateMap.entries()).map(([date, emotions]) => ({
-      date,
-      ...emotions
-    }))
+    // Extract data values (counts per day)
+    const dataValues = sortedTrends.map(trend => trend.count)
 
-    // Generate series for each emotion
-    const series = emotions.map(emotion => ({
-      key: emotion,
-      label: emotion.charAt(0).toUpperCase() + emotion.slice(1),
-      color: emotionColors[emotion].primary
-    }))
+    // Map primary emotions to colors for each point
+    const pointColors = sortedTrends.map(trend => 
+      emotionColors[trend.primaryEmotion]?.primary || emotionColors.neutral.primary
+    )
 
-    return generateMultiLineData(chartData, series)
+    // Create single dataset with colored points
+    return {
+      labels,
+      datasets: [{
+        label: 'Daily Emotion Analyses',
+        data: dataValues,
+        borderColor: '#9333ea', // purple-600
+        backgroundColor: '#9333ea33', // purple with transparency
+        pointBackgroundColor: pointColors,
+        pointBorderColor: pointColors,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        borderWidth: 3,
+        tension: 0.4,
+        fill: false
+      }],
+      // Store original trend data for tooltip access
+      _sortedTrends: sortedTrends
+    }
   }
+
+  // Custom chart options with enhanced tooltips
+  const customLineChartOptions = useMemo(() => ({
+    ...lineChartOptions,
+    plugins: {
+      ...lineChartOptions.plugins,
+      tooltip: {
+        ...lineChartOptions.plugins?.tooltip,
+        callbacks: {
+          title: (context: any) => {
+            const index = context[0]?.dataIndex
+            if (index !== undefined && data?.dailyTrends) {
+              const sortedTrends = [...data.dailyTrends].sort((a, b) => 
+                new Date(a.date).getTime() - new Date(b.date).getTime()
+              )
+              const trend = sortedTrends[index]
+              if (trend) {
+                try {
+                  const date = new Date(trend.date)
+                  return date.toLocaleDateString('en-US', { 
+                    year: 'numeric',
+                    month: 'long', 
+                    day: 'numeric' 
+                  })
+                } catch (error) {
+                  return trend.date
+                }
+              }
+            }
+            return context[0]?.label || ''
+          },
+          label: (context: any) => {
+            const value = context.parsed.y
+            const index = context.dataIndex
+            if (index !== undefined && data?.dailyTrends) {
+              const sortedTrends = [...data.dailyTrends].sort((a, b) => 
+                new Date(a.date).getTime() - new Date(b.date).getTime()
+              )
+              const trend = sortedTrends[index]
+              if (trend) {
+                const emotionName = trend.primaryEmotion.charAt(0).toUpperCase() + 
+                                   trend.primaryEmotion.slice(1)
+                return [
+                  `${value} ${value === 1 ? 'analysis' : 'analyses'}`,
+                  `Primary: ${emotionName}`
+                ]
+              }
+            }
+            return `${value} ${value === 1 ? 'analysis' : 'analyses'}`
+          }
+        }
+      },
+      legend: {
+        display: false // Hide default legend, we'll use custom legend below
+      }
+    }
+  }), [data?.dailyTrends])
 
   // Generate distribution chart data
   const generateDistributionData = () => {
@@ -164,7 +234,7 @@ export function EmotionTrendsChart({
       {/* Chart Container */}
       <div className="h-80">
         {chartType === 'line' && lineData ? (
-          <Line data={lineData} options={lineChartOptions} />
+          <Line data={lineData} options={customLineChartOptions} />
         ) : chartType === 'distribution' && distributionData ? (
           <Doughnut data={distributionData} options={doughnutChartOptions} />
         ) : (
@@ -208,18 +278,21 @@ export function EmotionTrendsChart({
         </div>
       </div>
 
-      {/* Legend for line chart */}
-      {chartType === 'line' && (
-        <div className="mt-4 flex flex-wrap gap-3 justify-center">
-          {Object.entries(emotionColors).map(([emotion, colors]) => (
-            <div key={emotion} className="flex items-center space-x-2">
-              <div 
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: colors.primary }}
-              />
-              <span className="text-xs text-gray-600 capitalize">{emotion}</span>
-            </div>
-          ))}
+      {/* Legend for line chart - Emotion color reference */}
+      {chartType === 'line' && lineData && (
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <p className="text-xs text-gray-500 text-center mb-3">Emotion Colors</p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            {Object.entries(emotionColors).map(([emotion, colors]) => (
+              <div key={emotion} className="flex items-center space-x-2">
+                <div 
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: colors.primary }}
+                />
+                <span className="text-xs text-gray-600 capitalize">{emotion}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
