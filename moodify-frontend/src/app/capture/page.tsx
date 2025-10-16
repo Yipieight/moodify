@@ -78,8 +78,7 @@ export default function CapturePage() {
   }
 
   const handleError = (error: string) => {
-    console.error("Capture error:", error)
-    // Error handling is done within individual components
+    setSaveError('Failed to capture your image. Please try again.')
   }
 
   const resetCapture = () => {
