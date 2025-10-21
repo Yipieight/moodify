@@ -5,6 +5,48 @@ import { spotifyService } from "@/lib/spotify"
 import { EmotionType } from "@/types"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
+import { verify } from 'jsonwebtoken'
+
+// Function to verify JWT token
+async function verifyJWTToken(token: string) {
+  const secret = process.env.JWT_SECRET || 'moodify-test-secret'
+  try {
+    const decoded = verify(token, secret) as { 
+      userId: string, 
+      email: string, 
+      name: string,
+      iat: number,
+      exp: number,
+      aud: string,
+      iss: string
+    }
+    return decoded
+  } catch (error) {
+    console.error('JWT verification error:', error)
+    return null
+  }
+}
+
+// Function to get user ID from request - supports both NextAuth and JWT
+async function getUserIdFromRequest(request: NextRequest) {
+  // First try NextAuth session (cookies)
+  const session = await getServerSession(authOptions)
+  if (session?.user?.id) {
+    return session.user.id
+  }
+  
+  // If no NextAuth session, try JWT from Authorization header
+  const authHeader = request.headers.get('authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7) // Remove "Bearer " prefix
+    const decoded = await verifyJWTToken(token)
+    if (decoded) {
+      return decoded.userId
+    }
+  }
+  
+  return null
+}
 
 const recommendationSchema = z.object({
   emotion: z.enum(['happy', 'sad', 'angry', 'surprised', 'neutral', 'fear', 'disgust']),
@@ -18,9 +60,9 @@ const recommendationSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    // Check authentication using both NextAuth and JWT
+    const userId = await getUserIdFromRequest(request)
+    if (!userId) {
       return NextResponse.json(
         { message: "Unauthorized" },
         { status: 401 }
@@ -50,7 +92,7 @@ export async function POST(request: NextRequest) {
     try {
       await prisma.music_recommendations.create({
         data: {
-          user_id: session.user.id,
+          user_id: userId,
           emotion: emotion,
           track_id: tracks[0]?.id || 'fallback',
           track_name: tracks[0]?.name || 'Fallback Track',
@@ -70,14 +112,14 @@ export async function POST(request: NextRequest) {
 
       // Update user statistics
       await prisma.user_statistics.upsert({
-        where: { user_id: session.user.id },
+        where: { user_id: userId },
         update: {
           total_recommendations: { increment: 1 },
           last_activity: new Date(),
           calculated_at: new Date()
         },
         create: {
-          user_id: session.user.id,
+          user_id: userId,
           total_analyses: 0,
           total_recommendations: 1,
           last_activity: new Date()
@@ -106,4 +148,17 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400', // 24 hours
+    },
+  });
 }
