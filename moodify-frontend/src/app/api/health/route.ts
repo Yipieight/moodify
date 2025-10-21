@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
 
-/**
- * Health Check API Endpoint
- * Used by load balancers and monitoring systems to verify application health
+/** 
+ * Public health check endpoint
+ * Returns basic service health information
  */
 export async function GET() {
   try {
-    // Basic health checks
     const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -15,8 +14,6 @@ export async function GET() {
       environment: process.env.NODE_ENV || 'development',
       checks: {
         server: 'ok',
-        memory: getMemoryUsage(),
-        env: checkEnvironmentVariables()
       }
     }
 
@@ -35,26 +32,15 @@ export async function GET() {
   }
 }
 
-function getMemoryUsage() {
-  const usage = process.memoryUsage()
-  return {
-    rss: Math.round(usage.rss / 1024 / 1024), // MB
-    heapTotal: Math.round(usage.heapTotal / 1024 / 1024), // MB
-    heapUsed: Math.round(usage.heapUsed / 1024 / 1024), // MB
-    external: Math.round(usage.external / 1024 / 1024), // MB
-  }
-}
-
-function checkEnvironmentVariables() {
-  const requiredEnvVars = [
-    'NEXTAUTH_SECRET',
-    'NEXT_PUBLIC_SPOTIFY_CLIENT_ID'
-  ]
-  
-  const missing = requiredEnvVars.filter(env => !process.env[env])
-  
-  return {
-    status: missing.length === 0 ? 'ok' : 'missing_env_vars',
-    missing: missing.length > 0 ? missing : undefined
-  }
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Max-Age': '86400', // 24 hours
+    },
+  });
 }
