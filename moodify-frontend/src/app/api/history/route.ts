@@ -3,6 +3,48 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { verify } from 'jsonwebtoken'
+
+// Function to verify JWT token
+async function verifyJWTToken(token: string) {
+  const secret = process.env.JWT_SECRET || 'moodify-test-secret'
+  try {
+    const decoded = verify(token, secret) as { 
+      userId: string, 
+      email: string, 
+      name: string,
+      iat: number,
+      exp: number,
+      aud: string,
+      iss: string
+    }
+    return decoded
+  } catch (error) {
+    console.error('JWT verification error:', error)
+    return null
+  }
+}
+
+// Function to get user ID from request - supports both NextAuth and JWT
+async function getUserIdFromRequest(request: NextRequest) {
+  // First try NextAuth session (cookies)
+  const session = await getServerSession(authOptions)
+  if (session?.user?.id) {
+    return session.user.id
+  }
+  
+  // If no NextAuth session, try JWT from Authorization header
+  const authHeader = request.headers.get('authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7) // Remove "Bearer " prefix
+    const decoded = await verifyJWTToken(token)
+    if (decoded) {
+      return decoded.userId
+    }
+  }
+  
+  return null
+}
 
 const historySchema = z.object({
   type: z.enum(['emotion', 'recommendation']),
@@ -17,9 +59,9 @@ const historySchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const userId = await getUserIdFromRequest(request)
     
-    if (!session?.user?.id) {
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -38,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     // Build where conditions
     const whereConditions: any = {
-      user_id: session.user.id
+      user_id: userId
     }
 
     if (startDate && endDate) {
@@ -167,9 +209,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const userId = await getUserIdFromRequest(request)
     
-    if (!session?.user?.id) {
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -193,7 +235,7 @@ export async function POST(request: NextRequest) {
       // Save emotion analysis to database
       const emotionAnalysis = await prisma.emotion_analyses.create({
         data: {
-          user_id: session.user.id,
+          user_id: userId,
           emotion: data.emotion,
           confidence: data.confidence || 0.5,
           metadata: {
@@ -229,7 +271,7 @@ export async function POST(request: NextRequest) {
       const firstTrack = data.tracks[0]
       const recommendation = await prisma.music_recommendations.create({
         data: {
-          user_id: session.user.id,
+          user_id: userId,
           emotion: data.emotion,
           track_id: firstTrack.id || 'unknown',
           track_name: firstTrack.name || 'Unknown Track',
@@ -283,9 +325,9 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const userId = await getUserIdFromRequest(request)
     
-    if (!session?.user?.id) {
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -306,7 +348,7 @@ export async function DELETE(request: NextRequest) {
     const deletedEmotion = await prisma.emotion_analyses.deleteMany({
       where: {
         id: entryId,
-        user_id: session.user.id
+        user_id: userId
       }
     })
 
@@ -315,7 +357,7 @@ export async function DELETE(request: NextRequest) {
       const deletedRecommendation = await prisma.music_recommendations.deleteMany({
         where: {
           id: entryId,
-          user_id: session.user.id
+          user_id: userId
         }
       })
 
@@ -338,4 +380,17 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400', // 24 hours
+    },
+  });
 }
