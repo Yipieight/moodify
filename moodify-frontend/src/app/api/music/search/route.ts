@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { 
           message: "Invalid search parameters", 
-          errors: validationResult.error.errors 
+          errors: validationResult.error.issues 
         },
         { status: 400 }
       )
