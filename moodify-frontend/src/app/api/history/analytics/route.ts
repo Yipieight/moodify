@@ -60,10 +60,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const timeRange = searchParams.get('timeRange') || '30' // days
 
-    // Calculate date range
+    // Calculate date range (inclusive of current day)
     const endDate = new Date()
+    // Set to end of current day to include all today's entries
+    endDate.setHours(23, 59, 59, 999)
+    
     const startDate = new Date()
-    startDate.setDate(startDate.getDate() - parseInt(timeRange))
+    startDate.setDate(startDate.getDate() - parseInt(timeRange) + 1)
+    // Set to start of the day for proper date range
+    startDate.setHours(0, 0, 0, 0)
 
     // Get emotion analyses from database
     const emotionEntries = await prisma.emotion_analyses.findMany({
@@ -219,7 +224,7 @@ function calculateWeeklyData(emotionEntries: any[], timeRange: number): Array<{
   count: number
   emotions: Record<EmotionType, number>
 }> {
-  const weeks: { [key: string]: { count: number, emotions: Record<EmotionType, number> } } = {}
+  const days: { [key: string]: { count: number, emotions: Record<EmotionType, number> } } = {}
   
   emotionEntries.forEach(entry => {
     // Ensure we have a valid date
@@ -229,14 +234,14 @@ function calculateWeeklyData(emotionEntries: any[], timeRange: number): Array<{
     // Check if date is valid
     if (isNaN(date.getTime())) return
     
-    const weekStart = getWeekStart(date)
-    // Check if weekStart is valid
-    if (isNaN(weekStart.getTime())) return
+    // Group by actual date, not week
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const dateKey = `${year}-${month}-${day}` // YYYY-MM-DD format
     
-    const weekKey = weekStart.toISOString().split('T')[0]
-    
-    if (!weeks[weekKey]) {
-      weeks[weekKey] = {
+    if (!days[dateKey]) {
+      days[dateKey] = {
         count: 0,
         emotions: {
           happy: 0, sad: 0, angry: 0, surprised: 0,
@@ -245,14 +250,20 @@ function calculateWeeklyData(emotionEntries: any[], timeRange: number): Array<{
       }
     }
     
-    weeks[weekKey].count++
+    days[dateKey].count++
     if (entry.emotion) {
-      weeks[weekKey].emotions[entry.emotion as EmotionType]++
+      days[dateKey].emotions[entry.emotion as EmotionType]++
     }
   })
 
-  return Object.entries(weeks).map(([week, data]) => ({
-    week,
+  // Sort days chronologically
+  const sortedDays = Object.entries(days).sort(([dateA], [dateB]) => {
+    return new Date(dateA).getTime() - new Date(dateB).getTime()
+  })
+
+  // Convert to weekly data format for consistency
+  return sortedDays.map(([date, data]) => ({
+    week: date, // Individual date in YYYY-MM-DD format
     count: data.count,
     emotions: data.emotions
   }))
@@ -273,7 +284,11 @@ function calculateDailyTrends(emotionEntries: any[], timeRange: number): Array<{
     // Check if date is valid
     if (isNaN(date.getTime())) return
     
-    const dateKey = date.toISOString().split('T')[0]
+    // Use UTC date to avoid timezone issues
+    const utcYear = date.getUTCFullYear()
+    const utcMonth = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const utcDay = String(date.getUTCDate()).padStart(2, '0')
+    const dateKey = `${utcYear}-${utcMonth}-${utcDay}` // YYYY-MM-DD format (UTC)
     
     if (!days[dateKey]) {
       days[dateKey] = {
@@ -291,7 +306,12 @@ function calculateDailyTrends(emotionEntries: any[], timeRange: number): Array<{
     }
   })
 
-  return Object.entries(days).map(([date, data]) => {
+  // Sort entries by date to ensure chronological order
+  const sortedDays = Object.entries(days).sort(([dateA], [dateB]) => {
+    return new Date(dateA).getTime() - new Date(dateB).getTime()
+  })
+
+  return sortedDays.map(([date, data]) => {
     // Find primary emotion for the day
     let primaryEmotion: EmotionType = 'neutral'
     let maxCount = 0
@@ -304,7 +324,7 @@ function calculateDailyTrends(emotionEntries: any[], timeRange: number): Array<{
     })
 
     return {
-      date,
+      date, // This will be in YYYY-MM-DD format
       count: data.count,
       primaryEmotion
     }
@@ -370,6 +390,7 @@ function calculateActivityPatterns(allEntries: any[]): {
     // Check if date is valid
     if (isNaN(date.getTime())) return
     
+    // Use local time for proper timezone handling
     const hour = date.getHours()
     const dayOfWeek = date.getDay()
     
@@ -377,6 +398,7 @@ function calculateActivityPatterns(allEntries: any[]): {
     dayOfWeekDistribution[dayOfWeek]++
   })
 
+  // Find peak activity indices
   const peakActivityHour = hourlyDistribution.indexOf(Math.max(...hourlyDistribution))
   const peakActivityDayIndex = dayOfWeekDistribution.indexOf(Math.max(...dayOfWeekDistribution))
   const peakActivityDay = dayNames[peakActivityDayIndex]
@@ -390,8 +412,15 @@ function calculateActivityPatterns(allEntries: any[]): {
 }
 
 function getWeekStart(date: Date): Date {
+  // Create a copy to avoid modifying the original date
   const d = new Date(date)
+  // Get day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
   const day = d.getDay()
+  // Calculate difference to get to Sunday (start of week)
   const diff = d.getDate() - day
-  return new Date(d.setDate(diff))
+  // Set to Sunday of the same week
+  const weekStart = new Date(d.setDate(diff))
+  // Set to start of day for consistency
+  weekStart.setHours(0, 0, 0, 0)
+  return weekStart
 }

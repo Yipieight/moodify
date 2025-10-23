@@ -1,12 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server';
 
-/** 
- * Public health check endpoint
- * Returns basic service health information
+/**
+ * GET /api/health
+ * 
+ * Public health check endpoint for monitoring and load balancers
+ * Returns system status without authentication
  */
 export async function GET() {
   try {
-    const health = {
+    // Basic system health check
+    const healthCheck = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
@@ -14,12 +17,26 @@ export async function GET() {
       environment: process.env.NODE_ENV || 'development',
       checks: {
         server: 'ok',
+        // Add more specific checks here as needed
+        memory: {
+          rss: Math.round(process.memoryUsage().rss / 1024 / 1024), // MB
+          heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024), // MB
+          heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024), // MB
+        }
       }
-    }
+    };
 
-    return NextResponse.json(health, { status: 200 })
+    return NextResponse.json(healthCheck, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Cache-Control': 'no-store, max-age=0',
+      }
+    });
   } catch (error) {
-    console.error('Health check failed:', error)
+    console.error('Health check error:', error);
     
     return NextResponse.json(
       {
@@ -27,20 +44,31 @@ export async function GET() {
         timestamp: new Date().toISOString(),
         error: error instanceof Error ? error.message : 'Unknown error'
       },
-      { status: 503 }
-    )
+      {
+        status: 503,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      }
+    );
   }
 }
 
-// Handle OPTIONS request for CORS
+/**
+ * OPTIONS /api/health
+ * 
+ * Handle CORS preflight requests for health endpoint
+ */
 export async function OPTIONS() {
-  return new Response(null, {
+  return new NextResponse(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400', // 24 hours
-    },
+    }
   });
 }

@@ -56,11 +56,18 @@ export function EmotionTrendsChart({
       new Date(a.date).getTime() - new Date(b.date).getTime()
     )
 
-    // Format date labels for x-axis
+    // Format date labels for x-axis with proper date parsing
     const labels = sortedTrends.map(trend => {
       try {
-        const date = new Date(trend.date)
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        // Parse the date string (YYYY-MM-DD format)
+        const [year, month, day] = trend.date.split('-')
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+        // Show full date format to make it clearer
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: 'numeric'
+        })
       } catch (error) {
         console.warn('Invalid date format:', trend.date)
         return trend.date
@@ -113,7 +120,9 @@ export function EmotionTrendsChart({
               const trend = sortedTrends[index]
               if (trend) {
                 try {
-                  const date = new Date(trend.date)
+                  // Parse the date string (YYYY-MM-DD format)
+                  const [year, month, day] = trend.date.split('-')
+                  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
                   return date.toLocaleDateString('en-US', { 
                     year: 'numeric',
                     month: 'long', 
