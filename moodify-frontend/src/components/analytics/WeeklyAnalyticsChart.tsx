@@ -44,13 +44,25 @@ export function WeeklyAnalyticsChart({ data, loading }: WeeklyAnalyticsChartProp
     { value: 'activity', label: 'Activity Patterns', icon: '⏰' }
   ]
 
-  // Generate weekly trends data
+  // Generate weekly trends data with correct date formatting
   const generateWeeklyData = () => {
     if (!data?.weeklyData) return null
 
     const weeks = data.weeklyData.map(item => {
-      const date = new Date(item.week)
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      try {
+        // Parse the date string (YYYY-MM-DD format)
+        const [year, month, day] = item.week.split('-')
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+        // Show actual date with proper formatting
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: 'numeric'
+        })
+      } catch (error) {
+        console.warn('Invalid date format:', item.week)
+        return item.week
+      }
     })
 
     return {
@@ -94,11 +106,12 @@ export function WeeklyAnalyticsChart({ data, loading }: WeeklyAnalyticsChartProp
     }
   }
 
-  // Generate activity patterns data
+  // Generate activity patterns data with proper day alignment
   const generateActivityData = () => {
     if (!data?.activityPatterns) return null
 
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    // Ensure day names match the actual dayOfWeekDistribution indices
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     
     return {
       labels: dayNames,
@@ -114,14 +127,16 @@ export function WeeklyAnalyticsChart({ data, loading }: WeeklyAnalyticsChartProp
     }
   }
 
-  // Generate hourly activity chart data
+  // Generate hourly activity chart data with proper hour formatting
   const generateHourlyData = () => {
     if (!data?.activityPatterns) return null
 
+    // Create proper hour labels (0-23)
     const hours = Array.from({ length: 24 }, (_, i) => {
-      const hour = i === 0 ? 12 : i > 12 ? i - 12 : i
-      const period = i < 12 ? 'AM' : 'PM'
-      return `${hour}${period}`
+      if (i === 0) return '12 AM'
+      if (i < 12) return `${i} AM`
+      if (i === 12) return '12 PM'
+      return `${i - 12} PM`
     })
 
     return {

@@ -11,7 +11,7 @@ interface HistoryFiltersProps {
 
 export function HistoryFilters({ filters, onFiltersChange }: HistoryFiltersProps) {
   const [localFilters, setLocalFilters] = useState({
-    type: filters.type || 'all',
+    type: filters.type || ('all' as const),
     emotion: '',
     startDate: filters.startDate ? filters.startDate.toISOString().split('T')[0] : '',
     endDate: filters.endDate ? filters.endDate.toISOString().split('T')[0] : '',
@@ -52,7 +52,7 @@ export function HistoryFilters({ filters, onFiltersChange }: HistoryFiltersProps
 
   const handleResetFilters = () => {
     const resetFilters = {
-      type: 'all',
+      type: 'all' as const,
       emotion: '',
       startDate: '',
       endDate: '',
@@ -103,7 +103,7 @@ export function HistoryFilters({ filters, onFiltersChange }: HistoryFiltersProps
           </label>
           <select
             value={localFilters.type}
-            onChange={(e) => setLocalFilters(prev => ({ ...prev, type: e.target.value }))}
+            onChange={(e) => setLocalFilters(prev => ({ ...prev, type: e.target.value as 'emotion' | 'recommendation' | 'all' }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
           >
             <option value="all" className="text-gray-900">All Types</option>
