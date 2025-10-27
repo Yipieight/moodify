@@ -6,15 +6,25 @@ import { useEffect, useState } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Loading } from "@/components/ui/Loading"
 import { RecommendationList } from "@/components/music/RecommendationList"
-import { MusicPlayer } from "@/components/music/MusicPlayer"
+import { TrackModal } from "@/components/music/TrackModal"
 import { useHistory } from "@/hooks/useHistory"
 import { EmotionType, Track, MusicRecommendation } from "@/types"
 import { 
   ArrowLeftIcon, 
   MusicalNoteIcon,
   FaceSmileIcon,
-  ExclamationTriangleIcon 
+  ExclamationTriangleIcon,
+  ArrowTopRightOnSquareIcon,
+  PlayIcon,
+  InformationCircleIcon
 } from "@heroicons/react/24/outline"
+
+// Utility function to format time (mm:ss)
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
 
 export default function RecommendationsPage() {
   const { data: session, status } = useSession()
@@ -28,6 +38,7 @@ export default function RecommendationsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [savedToHistory, setSavedToHistory] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Get emotion data from URL params
   const emotion = searchParams.get('emotion') as EmotionType || 'neutral'
@@ -105,34 +116,14 @@ export default function RecommendationsPage() {
   }
 
   const handleTrackSelect = (track: Track) => {
+    // Set the selected track and open the modal
     setCurrentTrack(track)
-    setIsPlaying(true)
+    setIsModalOpen(true)
+    console.log('Selected track:', track)
   }
 
-  const handlePlay = () => {
-    setIsPlaying(true)
-  }
-
-  const handlePause = () => {
-    setIsPlaying(false)
-  }
-
-  const handleNext = () => {
-    if (!currentTrack || tracks.length === 0) return
-    
-    const currentIndex = tracks.findIndex(track => track.id === currentTrack.id)
-    const nextIndex = (currentIndex + 1) % tracks.length
-    setCurrentTrack(tracks[nextIndex])
-    setIsPlaying(true)
-  }
-
-  const handlePrevious = () => {
-    if (!currentTrack || tracks.length === 0) return
-    
-    const currentIndex = tracks.findIndex(track => track.id === currentTrack.id)
-    const previousIndex = currentIndex === 0 ? tracks.length - 1 : currentIndex - 1
-    setCurrentTrack(tracks[previousIndex])
-    setIsPlaying(true)
+  const closeModal = () => {
+    setIsModalOpen(false)
   }
 
   const goBack = () => {
@@ -218,27 +209,33 @@ export default function RecommendationsPage() {
           </div>
         )}
 
-        {/* Music Player */}
-        {currentTrack && !loading && (
-          <div className="mb-8">
-            <MusicPlayer
-              track={currentTrack}
-              isPlaying={isPlaying}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-            />
-          </div>
-        )}
+        {/* Selected Track Information */}
+        {/* Removed - now showing in modal dialog */}
 
         {/* Recommendations List */}
         {!loading && tracks.length > 0 && (
-          <RecommendationList
-            tracks={tracks}
-            onTrackSelect={handleTrackSelect}
-            loading={loading}
-          />
+          <div className="mt-8">
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start">
+                <InformationCircleIcon className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h4 className="text-blue-900 font-medium mb-1">Track Selection</h4>
+                  <p className="text-blue-700 text-sm">
+                    Select any track below to view detailed information. 
+                    Due to Spotify API limitations, tracks can only be played through Spotify.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <RecommendationList
+              tracks={tracks}
+              onTrackSelect={handleTrackSelect}
+              selectedTrack={currentTrack}
+              loading={loading}
+              showPlayer={false} // Don't show the embedded player
+            />
+          </div>
         )}
 
         {/* Empty State */}
@@ -260,6 +257,11 @@ export default function RecommendationsPage() {
           </div>
         )}
       </div>
+      <TrackModal 
+        track={currentTrack} 
+        isOpen={isModalOpen} 
+        onClose={closeModal} 
+      />
     </MainLayout>
   )
 }

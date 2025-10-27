@@ -20,6 +20,7 @@ interface TrackCardProps {
   isCurrentTrack?: boolean
   onPlay: (track: Track) => void
   onPause: () => void
+  onTrackSelect?: (track: Track) => void
   onAddToPlaylist?: (track: Track) => void
   onLike?: (track: Track) => void
   isLiked?: boolean
@@ -47,11 +48,11 @@ export function TrackCard({
   const [showMenu, setShowMenu] = useState(false)
 
   const handlePlayPause = () => {
-    if (isCurrentTrack && isPlaying) {
-      onPause()
-    } else {
-      onPlay(track)
-    }
+    // Call onPlay to potentially trigger playback
+    onPlay(track)
+    
+    // Also call onTrackSelect to show track information
+    onTrackSelect?.(track)
   }
 
   const handleLike = () => {

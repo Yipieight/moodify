@@ -5,19 +5,22 @@ import { Track, EmotionType } from "@/types"
 import { TrackCard } from "./TrackCard"
 import { MusicPlayer } from "./MusicPlayer"
 import { LoadingSpinner } from "@/components/ui/Loading"
-import { getEmotionEmoji, getEmotionColor, capitalize } from "@/lib/utils"
+import { getEmotionEmoji, getEmotionColor, capitalize, formatTime } from "@/lib/utils"
 import { 
   MagnifyingGlassIcon,
   FunnelIcon,
   PlayIcon,
   PauseIcon,
   ArrowPathIcon,
-  QueueListIcon
+  QueueListIcon,
+  SpeakerWaveIcon,
+  ArrowTopRightOnSquareIcon
 } from "@heroicons/react/24/outline"
 
 interface RecommendationListProps {
   tracks: Track[]
   onTrackSelect: (track: Track) => void
+  selectedTrack?: Track | null
   loading?: boolean
   emotion?: EmotionType
   title?: string
@@ -33,10 +36,11 @@ type FilterOption = 'all' | 'with-preview' | 'popular'
 export function RecommendationList({
   tracks,
   onTrackSelect,
+  selectedTrack = null,
   loading = false,
   emotion,
   title,
-  showPlayer = true,
+  showPlayer = false,
   showFilters = true,
   variant = 'grid',
   className = ""
@@ -47,7 +51,6 @@ export function RecommendationList({
   const [sortBy, setSortBy] = useState<SortOption>('popularity')
   const [filterBy, setFilterBy] = useState<FilterOption>('all')
   const [likedTracks, setLikedTracks] = useState<Set<string>>(new Set())
-  const [isPlaylistMode, setIsPlaylistMode] = useState(false) // Para reproducción automática continua
 
   // Filter and sort tracks
   const filteredAndSortedTracks = useMemo(() => {
@@ -112,10 +115,6 @@ export function RecommendationList({
     
     if (nextTrack) {
       handleTrackPlay(nextTrack)
-    } else if (isPlaylistMode) {
-      // Si es el último track en modo playlist, detener
-      setIsPlaying(false)
-      setIsPlaylistMode(false)
     }
   }
 
@@ -147,22 +146,6 @@ export function RecommendationList({
       newLikedTracks.add(track.id)
     }
     setLikedTracks(newLikedTracks)
-  }
-
-  const playAll = () => {
-    if (filteredAndSortedTracks.length > 0) {
-      setIsPlaylistMode(true) // Activar modo lista de reproducción
-      handleTrackPlay(filteredAndSortedTracks[0])
-    }
-  }
-
-  // Función para manejar cuando termina una canción (auto-next)
-  const handleTrackEnd = () => {
-    if (isPlaylistMode) {
-      handleNext() // Automáticamente reproduce la siguiente
-    } else {
-      setIsPlaying(false)
-    }
   }
 
   if (loading) {
@@ -201,47 +184,15 @@ export function RecommendationList({
           )}
         </div>
 
-        {/* Play Controls */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={playAll}
-            disabled={filteredAndSortedTracks.length === 0}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              isPlaylistMode 
-                ? 'bg-green-600 hover:bg-green-700 text-white' 
-                : 'bg-purple-600 hover:bg-purple-700 text-white disabled:bg-gray-400'
-            }`}
-          >
-            {isPlaylistMode ? (
-              <QueueListIcon className="w-4 h-4" />
-            ) : (
-              <PlayIcon className="w-4 h-4" />
-            )}
-            <span>{isPlaylistMode ? 'Playing All' : 'Play All'}</span>
-          </button>
-          
-          <button
-            onClick={handleShuffle}
-            disabled={filteredAndSortedTracks.length === 0}
-            className="flex items-center space-x-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <ArrowPathIcon className="w-4 h-4" />
-            <span>Shuffle</span>
-          </button>
-          
-          {isPlaylistMode && (
-            <button
-              onClick={() => {
-                setIsPlaylistMode(false)
-                setIsPlaying(false)
-              }}
-              className="flex items-center space-x-2 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-lg font-medium transition-colors"
-            >
-              <PauseIcon className="w-4 h-4" />
-              <span>Stop</span>
-            </button>
-          )}
-        </div>
+        {/* Shuffle Button */}
+        <button
+          onClick={handleShuffle}
+          disabled={filteredAndSortedTracks.length === 0}
+          className="flex items-center space-x-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          <ArrowPathIcon className="w-4 h-4" />
+          <span>Shuffle</span>
+        </button>
       </div>
 
       {/* Filters and Search */}
@@ -283,22 +234,6 @@ export function RecommendationList({
             <option value="with-preview">With Preview</option>
             <option value="popular">Popular (70%+)</option>
           </select>
-
-          {/* View Toggle */}
-          <div className="flex border border-gray-300 rounded-lg overflow-hidden">
-            <button
-              onClick={() => {/* Toggle to grid view */}}
-              className={`px-3 py-2 text-sm ${variant === 'grid' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} transition-colors`}
-            >
-              <QueueListIcon className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => {/* Toggle to list view */}}
-              className={`px-3 py-2 text-sm ${variant === 'list' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'} transition-colors`}
-            >
-              <FunnelIcon className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       )}
 
@@ -321,42 +256,92 @@ export function RecommendationList({
       )}
 
       {/* Track List */}
-      {filteredAndSortedTracks.length > 0 && (
-        <div className={variant === 'grid' 
-          ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-          : "space-y-2"
-        }>
-          {filteredAndSortedTracks.map((track, index) => (
-            <TrackCard
-              key={track.id}
-              track={track}
-              isPlaying={isPlaying}
-              isCurrentTrack={currentTrack?.id === track.id}
-              onPlay={handleTrackPlay}
-              onPause={handlePause}
-              onLike={handleLike}
-              isLiked={likedTracks.has(track.id)}
-              showIndex={variant === 'list'}
-              index={index}
-              variant={variant === 'list' ? 'compact' : 'default'}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Music Player */}
-      {showPlayer && currentTrack && (
-        <div className="sticky bottom-4">
-          <MusicPlayer
-            track={currentTrack}
+      <div className={variant === 'grid' 
+        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+        : "space-y-2"
+      }>
+        {filteredAndSortedTracks.map((track, index) => (
+          <TrackCard
+            key={track.id}
+            track={track}
             isPlaying={isPlaying}
-            onPlay={() => setIsPlaying(true)}
+            isCurrentTrack={currentTrack?.id === track.id}
+            onPlay={handleTrackPlay}
             onPause={handlePause}
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-            onEnded={handleTrackEnd} // Nueva funcionalidad para auto-next
-            className="shadow-lg"
+            onTrackSelect={onTrackSelect}
+            onLike={handleLike}
+            isLiked={likedTracks.has(track.id)}
+            showIndex={variant === 'list'}
+            index={index}
+            variant={variant === 'list' ? 'compact' : 'default'}
           />
+        ))}
+      </div>
+
+      {/* Show expanded track information for selected track */}
+      {selectedTrack && (
+        <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-start space-x-4">
+            {selectedTrack.imageUrl ? (
+              <img
+                src={selectedTrack.imageUrl}
+                alt={`${selectedTrack.album} cover`}
+                className="w-24 h-24 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
+                <SpeakerWaveIcon className="w-12 h-12 text-gray-400" />
+              </div>
+            )}
+            
+            <div className="flex-1">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Selected Track</h3>
+              <h4 className="text-lg font-semibold text-gray-900">{selectedTrack.name}</h4>
+              <p className="text-gray-600 mb-1">{selectedTrack.artist}</p>
+              <p className="text-sm text-gray-500 mb-3">{selectedTrack.album}</p>
+              
+              <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                <div>
+                  <span className="text-gray-500">Duration:</span>
+                  <span className="ml-2 text-gray-900">{formatTime(selectedTrack.duration)}</span>
+                </div>
+                {selectedTrack.popularity && (
+                  <div>
+                    <span className="text-gray-500">Popularity:</span>
+                    <span className="ml-2 text-gray-900">{selectedTrack.popularity}/100</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => window.open(selectedTrack.spotifyUrl, '_blank')}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  <ArrowTopRightOnSquareIcon className="w-4 h-4 mr-2" />
+                  Open in Spotify
+                </button>
+                
+                {selectedTrack.previewUrl && (
+                  <button
+                    onClick={() => window.open(selectedTrack.previewUrl!, '_blank')}
+                    className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <PlayIcon className="w-4 h-4 mr-2" />
+                    Preview
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {!selectedTrack.previewUrl && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-700 text-sm">
+                Preview not available for this track. Visit Spotify for full listening experience.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
