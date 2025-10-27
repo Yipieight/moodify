@@ -160,6 +160,28 @@ npm run test:watch
 
 ## 📚 API Reference
 
+### OpenAPI Specification
+
+Moodify includes a complete OpenAPI 3.1 specification for all API endpoints:
+
+- **Specification File**: `openapi.yaml` (root directory)
+- **Documentation**: See [OpenAPI Integration Guide](docs/api/OPENAPI_INTEGRATION.md)
+- **Validation**: `npx @apidevtools/swagger-cli validate openapi.yaml`
+- **Interactive Docs**: Available in Fumadocs integration
+
+#### Quick API Overview
+
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/health` | GET | System health check | No |
+| `/api/auth/register` | POST | User registration | No |
+| `/api/user/profile` | GET, PUT | User profile management | Yes |
+| `/api/history` | GET, POST, DELETE | Emotion/recommendation history | Yes |
+| `/api/history/analytics` | GET | User analytics and insights | Yes |
+| `/api/recommendations` | GET, POST | Music recommendations | Yes |
+| `/api/music/search` | GET | Search Spotify tracks | Yes |
+| `/api/music/tracks/{id}` | GET | Track details | Yes |
+
 ### Internal APIs
 
 #### History API (`/api/history`)
@@ -177,6 +199,40 @@ POST /api/history
 
 // Delete entry
 DELETE /api/history?id=entry-id
+```
+
+#### Recommendations API (`/api/recommendations`)
+
+```typescript
+// Generate recommendations
+POST /api/recommendations
+{
+  "emotion": "happy",
+  "confidence": 0.92,
+  "limit": 10,
+  "userPreferences": {
+    "genres": ["pop", "dance"],
+    "excludeExplicit": false
+  }
+}
+
+// Get recommendations by emotion
+GET /api/recommendations?emotion=happy&limit=20
+```
+
+#### Analytics API (`/api/history/analytics`)
+
+```typescript
+// Get user analytics
+GET /api/history/analytics?timeRange=30
+
+// Response includes:
+// - Total analyses and recommendations
+// - Emotion distribution
+// - Sentiment analysis
+// - Weekly/daily trends
+// - Music preferences
+// - Activity patterns
 ```
 
 ### External Integrations

@@ -219,10 +219,95 @@ export class EmotionDetectionService {
       return false
     }
   }
+
+  /**
+   * Reset the service state - for testing purposes only
+   */
+  public resetForTest(): void {
+    this.isInitialized = false;
+    this.modelsLoaded = false;
+  }
 }
 
 // Export a singleton instance
 export const emotionDetectionService = EmotionDetectionService.getInstance()
+
+// Create a legacy API for compatibility with tests
+let modelsAlreadyLoaded = false;
+export const emotionService = {
+  /**
+   * Load models for face detection (wrapper for initialize)
+   */
+  async loadModels(): Promise<void> {
+    if (modelsAlreadyLoaded) {
+      // Models already loaded, return early to prevent duplicate loading
+      return;
+    }
+    await emotionDetectionService.initialize();
+    modelsAlreadyLoaded = true;
+  },
+
+  /**
+   * Reset the service state - for testing purposes only
+   */
+  resetServiceState(): void {
+    modelsAlreadyLoaded = false;
+    // Reset the underlying service as well using a new method
+    emotionDetectionService.resetForTest();
+  },
+
+  /**
+   * Analyze image for emotions (wrapper for detectEmotions)
+   */
+  async analyzeImage(imageElement: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement): Promise<{ emotion: string; confidence: number; allEmotions: Record<string, number> }> {
+    const result = await emotionDetectionService.detectEmotions(imageElement);
+    if (!result) throw new Error('No emotion detected');
+    
+    // Get detailed expressions to return all emotions
+    const detailed = await emotionDetectionService.getDetailedEmotions(imageElement);
+    if (!detailed) throw new Error('Could not get detailed emotions');
+    
+    // Map the expressions to the format expected by tests
+    const allEmotions: Record<string, number> = {
+      happy: detailed.expressions.happy,
+      sad: detailed.expressions.sad,
+      angry: detailed.expressions.angry,
+      surprised: detailed.expressions.surprised,
+      neutral: detailed.expressions.neutral,
+      fearful: detailed.expressions.fear,
+      disgusted: detailed.expressions.disgust
+    };
+    
+    return {
+      emotion: result.emotion,
+      confidence: result.confidence,
+      allEmotions
+    };
+  },
+
+  /**
+   * Get dominant emotion from expressions
+   */
+  getDominantEmotion(expressions: Record<string, number>): { emotion: string; confidence: number } {
+    const entries = Object.entries(expressions);
+    if (entries.length === 0) {
+      return { emotion: 'neutral', confidence: 0 };
+    }
+    
+    const [emotion, confidence] = entries.reduce((max, current) => 
+      current[1] > max[1] ? current : max
+    );
+    
+    return { emotion, confidence };
+  },
+
+  /**
+   * Check if service is ready
+   */
+  isReady(): boolean {
+    return emotionDetectionService.isReady();
+  }
+};
 
 // Helper function to download and setup face-api.js models
 export const setupFaceApiModels = async (): Promise<void> => {
