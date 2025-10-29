@@ -90,7 +90,7 @@ export class SpotifyService {
   /**
    * Get Client Credentials access token
    */
-  private async getAccessToken(): Promise<string> {
+  public async getAccessToken(): Promise<string> {
     // Check if current token is still valid
     if (this.accessToken && Date.now() < this.tokenExpiry) {
       return this.accessToken
@@ -103,6 +103,11 @@ export class SpotifyService {
       throw new Error('Spotify credentials not configured')
     }
 
+    // For testing purposes, if fetch is not defined properly, throw error to avoid Node fetch
+    if (typeof fetch === 'undefined') {
+      throw new Error('Global fetch is undefined')
+    }
+
     const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
@@ -113,7 +118,7 @@ export class SpotifyService {
     })
 
     if (!response.ok) {
-      throw new Error('Failed to get Spotify access token')
+      throw new Error('Spotify authentication failed')
     }
 
     const data: SpotifyAuthResponse = await response.json()
@@ -206,7 +211,13 @@ export class SpotifyService {
     )
 
     if (!response.ok) {
-      const errorText = await response.text()
+      let errorText = 'Unknown error'
+      if (response.text) {
+        errorText = await response.text()
+      } else {
+        // For test environments
+        errorText = `HTTP ${response.status}`
+      }
       console.error('Spotify Recommendations API Error:', {
         status: response.status,
         statusText: response.statusText,
@@ -309,7 +320,11 @@ export class SpotifyService {
       )
 
       if (!response.ok) {
-        throw new Error(`Spotify search error: ${response.status}`)
+        let errorText = `Spotify search error: ${response.status}`
+        if (response.text) {
+          errorText = `Spotify search error: ${response.status} - ${await response.text()}`
+        }
+        throw new Error(errorText)
       }
 
       const data: SpotifySearchResponse = await response.json()
@@ -337,7 +352,11 @@ export class SpotifyService {
       )
 
       if (!response.ok) {
-        throw new Error(`Spotify track error: ${response.status}`)
+        let errorText = `Spotify track error: ${response.status}`
+        if (response.text) {
+          errorText = `Spotify track error: ${response.status} - ${await response.text()}`
+        }
+        throw new Error(errorText)
       }
 
       const track: SpotifyTrack = await response.json()
@@ -443,6 +462,12 @@ export class SpotifyService {
 
     const emotionTracks = fallbackTracks[emotion] || fallbackTracks.neutral
     return emotionTracks.slice(0, limit)
+  }
+
+  /**\n   * Clear the cached access token (for testing purposes)\n   */
+  public clearTokenCache(): void {
+    this.accessToken = null
+    this.tokenExpiry = 0
   }
 }
 
