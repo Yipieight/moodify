@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { verify } from 'jsonwebtoken'
+import { EmotionType } from '@/types'
 
 // Function to verify JWT token
 async function verifyJWTToken(token: string) {
@@ -70,6 +71,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') // 'emotion' | 'recommendation' | 'all'
+    const emotion = searchParams.get('emotion') as EmotionType | null
+    const timeRange = searchParams.get('timeRange')
     const limit = parseInt(searchParams.get('limit') || '20')
     const page = parseInt(searchParams.get('page') || '1')
     const startDate = searchParams.get('startDate')
@@ -83,33 +86,73 @@ export async function GET(request: NextRequest) {
       user_id: userId
     }
 
-    if (startDate && endDate) {
+    // Add emotion filter if provided
+    if (emotion) {
+      whereConditions.emotion = emotion
+    }
+
+    // Handle special time ranges first
+    if (timeRange === '24hours') {
+      // For last 24 hours, calculate from current time back 24 hours
+      const twentyFourHoursAgo = new Date(Date.now() - (24 * 60 * 60 * 1000));
       whereConditions.created_at = {
-        gte: new Date(startDate),
-        lte: new Date(endDate)
-      }
+        gte: twentyFourHoursAgo
+      };
+    } else if (startDate && endDate) {
+      // Properly handle date range filtering by creating date objects from date strings
+      // and ensuring we include the full day for end date
+      const startDateTime = new Date(startDate);
+      const endDateTime = new Date(endDate);
+      // Set end time to end of day (23:59:59) to include all records from that day
+      endDateTime.setHours(23, 59, 59, 999);
+      
+      whereConditions.created_at = {
+        gte: startDateTime,
+        lte: endDateTime
+      };
     } else if (startDate) {
       whereConditions.created_at = {
         gte: new Date(startDate)
       }
     } else if (endDate) {
+      // For end date only, include the full day
+      const endDateTime = new Date(endDate);
+      endDateTime.setHours(23, 59, 59, 999);
       whereConditions.created_at = {
-        lte: new Date(endDate)
+        lte: endDateTime
       }
     }
 
-    let historyData: any[] = []
-    let totalCount = 0
+    let totalCount = 0;
+    let historyData: any[] = [];
+    
+    // Create separate where conditions for emotion analyses and music recommendations
+    let emotionWhereConditions = { ...whereConditions }
+    let recommendationWhereConditions = { ...whereConditions }
+    
+    // If emotion filter exists but no specific type, or specific type with emotion filter
+    if (emotion) {
+        if (!type || type === 'emotion') {
+            emotionWhereConditions.emotion = emotion;
+        }
+        if (!type || type === 'recommendation') {
+            recommendationWhereConditions.emotion = emotion;
+        }
+    }
+
+    // Initialize separate arrays for each type of data
+    let emotionHistoryData: any[] = [];
+    let recommendationHistoryData: any[] = [];
 
     if (type === 'emotion' || !type || type === 'all') {
       const emotionAnalyses = await prisma.emotion_analyses.findMany({
-        where: whereConditions,
+        where: emotionWhereConditions,
         orderBy: { created_at: 'desc' },
         take: type === 'emotion' ? limit : undefined,
         skip: type === 'emotion' ? offset : undefined
       })
 
-      const emotionHistory = emotionAnalyses.map(analysis => ({
+      emotionHistoryData = emotionAnalyses.map(analysis => ({
         id: analysis.id,
         type: 'emotion',
         data: {
@@ -120,22 +163,21 @@ export async function GET(request: NextRequest) {
         createdAt: analysis.created_at
       }))
 
-      historyData = [...historyData, ...emotionHistory]
-
       if (type === 'emotion') {
-        totalCount = await prisma.emotion_analyses.count({ where: whereConditions })
+        // When filtering specifically for emotions, get the total count
+        totalCount = await prisma.emotion_analyses.count({ where: emotionWhereConditions });
       }
     }
 
     if (type === 'recommendation' || !type || type === 'all') {
       const recommendations = await prisma.music_recommendations.findMany({
-        where: whereConditions,
+        where: recommendationWhereConditions,
         orderBy: { created_at: 'desc' },
         take: type === 'recommendation' ? limit : undefined,
         skip: type === 'recommendation' ? offset : undefined
       })
 
-      const recommendationHistory = recommendations.map(rec => {
+      recommendationHistoryData = recommendations.map(rec => {
         // Parse audio_features if it's a JSON string
         let audioFeatures = {}
         try {
@@ -169,17 +211,59 @@ export async function GET(request: NextRequest) {
         return historyItem
       })
 
-      historyData = [...historyData, ...recommendationHistory]
-
       if (type === 'recommendation') {
-        totalCount = await prisma.music_recommendations.count({ where: whereConditions })
+        // When filtering specifically for recommendations, get the total count
+        totalCount = await prisma.music_recommendations.count({ where: recommendationWhereConditions });
+      }
+    }
+
+    // Combine results based on the type filter
+    if (type === 'emotion') {
+      historyData = emotionHistoryData; // Only emotion results
+    } else if (type === 'recommendation') {
+      historyData = recommendationHistoryData; // Only recommendation results
+    } else {
+      // For type 'all' or undefined, combine both types
+      historyData = [...emotionHistoryData, ...recommendationHistoryData];
+      
+      // If no type filter but there is an emotion filter, calculate combined total
+      if (emotion) {
+        const [emotionCount, recommendationCount] = await Promise.all([
+          prisma.emotion_analyses.count({ where: emotionWhereConditions }),
+          prisma.music_recommendations.count({ where: recommendationWhereConditions })
+        ]);
+        totalCount = emotionCount + recommendationCount;
+      } else {
+        // If no filters at all, get total from both tables
+        const [emotionCount, recommendationCount] = await Promise.all([
+          prisma.emotion_analyses.count({ where: { user_id: userId } }),
+          prisma.music_recommendations.count({ where: { user_id: userId } })
+        ]);
+        totalCount = emotionCount + recommendationCount;
       }
     }
 
     if (!type || type === 'all') {
       // Sort by creation date and apply pagination
       historyData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      totalCount = historyData.length
+      
+      // If there's an emotion filter but no specific type, calculate total count from both tables
+      if (emotion) {
+        const [emotionCount, recommendationCount] = await Promise.all([
+          prisma.emotion_analyses.count({ where: emotionWhereConditions }),
+          prisma.music_recommendations.count({ where: recommendationWhereConditions })
+        ]);
+        totalCount = emotionCount + recommendationCount;
+      } else {
+        // Count from both tables when type is 'all' but no emotion filter
+        const [emotionCount, recommendationCount] = await Promise.all([
+          prisma.emotion_analyses.count({ where: { user_id: userId } }),
+          prisma.music_recommendations.count({ where: { user_id: userId } })
+        ]);
+        totalCount = emotionCount + recommendationCount;
+      }
+      
+      // Apply pagination to the sorted results
       historyData = historyData.slice(offset, offset + limit)
     }
 

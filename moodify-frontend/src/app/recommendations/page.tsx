@@ -234,6 +234,7 @@ export default function RecommendationsPage() {
               selectedTrack={currentTrack}
               loading={loading}
               showPlayer={false} // Don't show the embedded player
+              isModalOpen={isModalOpen}
             />
           </div>
         )}

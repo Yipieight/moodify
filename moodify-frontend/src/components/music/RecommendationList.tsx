@@ -28,6 +28,7 @@ interface RecommendationListProps {
   showFilters?: boolean
   variant?: 'grid' | 'list'
   className?: string
+  isModalOpen?: boolean
 }
 
 type SortOption = 'name' | 'artist' | 'popularity' | 'duration'
@@ -43,7 +44,8 @@ export function RecommendationList({
   showPlayer = false,
   showFilters = true,
   variant = 'grid',
-  className = ""
+  className = "",
+  isModalOpen = false
 }: RecommendationListProps) {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -274,6 +276,7 @@ export function RecommendationList({
             showIndex={variant === 'list'}
             index={index}
             variant={variant === 'list' ? 'compact' : 'default'}
+            isModalOpen={isModalOpen}
           />
         ))}
       </div>

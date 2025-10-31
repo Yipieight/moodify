@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Track } from "@/types"
 import { formatTime } from "@/lib/utils"
 import { 
@@ -28,6 +28,7 @@ interface TrackCardProps {
   index?: number
   variant?: 'default' | 'compact' | 'detailed'
   className?: string
+  isModalOpen?: boolean
 }
 
 export function TrackCard({
@@ -42,9 +43,16 @@ export function TrackCard({
   showIndex = false,
   index,
   variant = 'default',
-  className = ""
+  className = "",
+  isModalOpen = false
 }: TrackCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setIsHovered(false)
+    }
+  }, [isModalOpen])
   const [showMenu, setShowMenu] = useState(false)
 
   const handlePlayPause = () => {
@@ -73,18 +81,18 @@ export function TrackCard({
   if (variant === 'compact') {
     return (
       <div 
-        className={`flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors group ${
+        className={`flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all duration-200 group ${
           isCurrentTrack ? 'bg-purple-50 border border-purple-200' : ''
         } ${className}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Index or Play Button */}
-        <div className="w-8 text-center mr-4">
+        <div className="w-8 text-center mr-4 transition-all duration-200">
           {isHovered || isCurrentTrack ? (
             <button
               onClick={handlePlayPause}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-600 hover:bg-purple-700 text-white transition-all duration-200 transform hover:scale-105"
             >
               {isCurrentTrack && isPlaying ? (
                 <PauseIcon className="w-4 h-4" />
@@ -93,7 +101,7 @@ export function TrackCard({
               )}
             </button>
           ) : (
-            <span className="text-gray-500 text-sm">
+            <span className="text-gray-500 text-sm transition-opacity duration-200">
               {showIndex && index !== undefined ? index + 1 : '♪'}
             </span>
           )}
@@ -106,16 +114,16 @@ export function TrackCard({
         </div>
 
         {/* Duration */}
-        <div className="text-sm text-gray-500 mr-4">
+        <div className="text-sm text-gray-500 mr-4 transition-all duration-200">
           {formatTime(track.duration)}
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out">
           {onLike && (
             <button
               onClick={handleLike}
-              className="p-1 text-gray-500 hover:text-red-500 transition-colors"
+              className="p-1 text-gray-500 hover:text-red-500 transition-all duration-200"
             >
               {isLiked ? (
                 <HeartIconSolid className="w-5 h-5 text-red-500" />
@@ -127,7 +135,7 @@ export function TrackCard({
           
           <button
             onClick={openInSpotify}
-            className="p-1 text-gray-500 hover:text-green-600 transition-colors"
+            className="p-1 text-gray-500 hover:text-green-600 transition-all duration-200"
             title="Open in Spotify"
           >
             <ArrowTopRightOnSquareIcon className="w-5 h-5" />
@@ -139,7 +147,7 @@ export function TrackCard({
 
   return (
     <div 
-      className={`bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all group ${
+      className={`bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-200 group ${
         isCurrentTrack ? 'ring-2 ring-purple-500' : ''
       } ${className}`}
       onMouseEnter={() => setIsHovered(true)}
@@ -152,7 +160,7 @@ export function TrackCard({
             <img
               src={track.imageUrl}
               alt={`${track.album} cover`}
-              className="w-full aspect-square object-cover rounded-lg"
+              className="w-full aspect-square object-cover rounded-lg transition-transform duration-200 group-hover:scale-105"
             />
           ) : (
             <div className="w-full aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
@@ -161,12 +169,12 @@ export function TrackCard({
           )}
 
           {/* Play/Pause Overlay */}
-          <div className={`absolute inset-0 bg-purple-900 bg-opacity-60 rounded-lg flex items-center justify-center transition-opacity ${
+          <div className={`absolute inset-0 bg-purple-900 bg-opacity-60 rounded-lg flex items-center justify-center transition-all duration-200 ${
             isHovered || isCurrentTrack ? 'opacity-100' : 'opacity-0'
           }`}>
             <button
               onClick={handlePlayPause}
-              className="w-12 h-12 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+              className="w-12 h-12 bg-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
             >
               {isCurrentTrack && isPlaying ? (
                 <PauseIcon className="w-6 h-6 text-gray-900" />
@@ -178,21 +186,21 @@ export function TrackCard({
 
           {/* Preview Indicator */}
           {!track.previewUrl && (
-            <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+            <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded transition-opacity duration-200">
               No Preview
             </div>
           )}
         </div>
 
         {/* Track Info */}
-        <div className="mb-3">
+        <div className="mb-3 transition-all duration-200">
           <h3 className="font-semibold text-gray-900 truncate mb-1">{track.name}</h3>
           <p className="text-gray-600 truncate mb-1">{track.artist}</p>
           <p className="text-sm text-gray-500 truncate">{track.album}</p>
         </div>
 
         {/* Track Details */}
-        <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
+        <div className="flex justify-between items-center text-sm text-gray-500 mb-4 transition-all duration-200">
           <span>{formatTime(track.duration)}</span>
           {track.popularity && (
             <span className="flex items-center">
@@ -202,12 +210,12 @@ export function TrackCard({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between transition-all duration-200">
           <div className="flex items-center space-x-2">
             {onLike && (
               <button
                 onClick={handleLike}
-                className="p-2 text-gray-500 hover:text-red-500 transition-colors"
+                className="p-2 text-gray-500 hover:text-red-500 transition-all duration-200"
                 title={isLiked ? "Unlike" : "Like"}
               >
                 {isLiked ? (
@@ -221,7 +229,7 @@ export function TrackCard({
             {onAddToPlaylist && (
               <button
                 onClick={handleAddToPlaylist}
-                className="p-2 text-gray-500 hover:text-purple-600 transition-colors"
+                className="p-2 text-gray-500 hover:text-purple-600 transition-all duration-200"
                 title="Add to playlist"
               >
                 <PlusIcon className="w-5 h-5" />
@@ -232,7 +240,7 @@ export function TrackCard({
             <div className="relative">
               <button
                 onClick={() => setShowMenu(!showMenu)}
-                className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                className="p-2 text-gray-500 hover:text-gray-700 transition-all duration-200"
               >
                 <EllipsisHorizontalIcon className="w-5 h-5" />
               </button>
@@ -241,7 +249,7 @@ export function TrackCard({
                 <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-10 min-w-[150px]">
                   <button
                     onClick={openInSpotify}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 transition-colors duration-150"
                   >
                     <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                     <span>Open in Spotify</span>
@@ -249,7 +257,7 @@ export function TrackCard({
                   {onAddToPlaylist && (
                     <button
                       onClick={handleAddToPlaylist}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2 transition-colors duration-150"
                     >
                       <PlusIcon className="w-4 h-4" />
                       <span>Add to Playlist</span>
@@ -263,7 +271,7 @@ export function TrackCard({
           {/* Spotify Link */}
           <button
             onClick={openInSpotify}
-            className="text-green-600 hover:text-green-700 transition-colors text-sm font-medium"
+            className="text-green-600 hover:text-green-700 transition-colors duration-200 text-sm font-medium"
           >
             Spotify
           </button>

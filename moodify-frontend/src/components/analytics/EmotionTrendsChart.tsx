@@ -229,7 +229,7 @@ export function EmotionTrendsChart({
           <select
             value={timeRange}
             onChange={(e) => onTimeRangeChange(Number(e.target.value))}
-            className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="text-black px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
           >
             {timeRangeOptions.map(option => (
               <option key={option.value} value={option.value}>

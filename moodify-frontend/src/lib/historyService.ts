@@ -12,6 +12,7 @@ export interface HistoryFilters {
   type?: 'emotion' | 'recommendation' | 'all'
   startDate?: Date
   endDate?: Date
+  timeRange?: string  // For special time ranges like '24hours'
   emotion?: EmotionType
   limit?: number
   page?: number
@@ -132,6 +133,7 @@ class HistoryService {
     if (filters.emotion) params.append('emotion', filters.emotion)
     if (filters.startDate) params.append('startDate', filters.startDate.toISOString())
     if (filters.endDate) params.append('endDate', filters.endDate.toISOString())
+    if (filters.timeRange) params.append('timeRange', filters.timeRange)
     if (filters.limit) params.append('limit', filters.limit.toString())
     if (filters.page) params.append('page', filters.page.toString())
 
