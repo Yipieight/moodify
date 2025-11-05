@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { historyService, HistoryEntry, HistoryFilters, AnalyticsData } from '@/lib/historyService'
-import { EmotionResult, MusicRecommendation } from '@/types'
+import { EmotionResult, MusicRecommendation, Track } from '@/types'
 
 interface UseHistoryReturn {
   history: HistoryEntry[]
@@ -12,6 +12,7 @@ interface UseHistoryReturn {
   loadHistory: (filters?: HistoryFilters) => Promise<void>
   saveEmotion: (emotion: EmotionResult) => Promise<void>
   saveRecommendation: (recommendation: MusicRecommendation) => Promise<void>
+  saveTrack: (track: Track, emotion?: EmotionType, emotionAnalysisId?: string | null) => Promise<void>
   deleteEntry: (entryId: string) => Promise<void>
   loadAnalytics: (timeRange?: number) => Promise<void>
   clearError: () => void
@@ -42,6 +43,7 @@ export function useHistory(): UseHistoryReturn {
     try {
       const savedEntry = await historyService.saveEmotionResult(emotion)
       setHistory(prev => [savedEntry, ...prev])
+      return savedEntry
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save emotion')
       throw err
@@ -54,6 +56,16 @@ export function useHistory(): UseHistoryReturn {
       setHistory(prev => [savedEntry, ...prev])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save recommendation')
+      throw err
+    }
+  }, [])
+
+  const saveTrack = useCallback(async (track: Track, emotion?: EmotionType, emotionAnalysisId?: string | null) => {
+    try {
+      const savedEntry = await historyService.saveTrack(track, emotion, emotionAnalysisId)
+      setHistory(prev => [savedEntry, ...prev])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save track')
       throw err
     }
   }, [])
@@ -85,6 +97,7 @@ export function useHistory(): UseHistoryReturn {
     loadHistory,
     saveEmotion,
     saveRecommendation,
+    saveTrack,
     deleteEntry,
     loadAnalytics,
     clearError

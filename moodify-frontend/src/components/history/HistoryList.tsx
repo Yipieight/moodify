@@ -15,9 +15,10 @@ import {
 
 interface HistoryListProps {
   className?: string
+  type?: 'emotions' | 'songs'
 }
 
-export function HistoryList({ className = '' }: HistoryListProps) {
+export function HistoryList({ className = '', type = 'emotions' }: HistoryListProps) {
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -38,13 +39,14 @@ export function HistoryList({ className = '' }: HistoryListProps) {
 
   useEffect(() => {
     loadHistory()
-  }, [filters])
+  }, [filters, type])
 
   const loadHistory = async () => {
     try {
       setLoading(true)
       setError(null)
-      const response = await historyService.getHistory(filters)
+      const historyType = type === 'emotions' ? 'emotion' : 'recommendation';
+      const response = await historyService.getHistory({ ...filters, type: historyType })
       
       if (filters.page === 1) {
         setHistory(response.history)
@@ -142,7 +144,7 @@ export function HistoryList({ className = '' }: HistoryListProps) {
     }
   }
 
-  // Filter history based on search query
+  // Remove duplicates by track ID for individual tracks
   const filteredHistory = history.filter(item => {
     if (!searchQuery) return true
     
@@ -152,7 +154,7 @@ export function HistoryList({ className = '' }: HistoryListProps) {
       if (item.type === 'emotion') {
         const emotion = item.data as EmotionResult
         return emotion?.emotion?.toLowerCase().includes(query)
-      } else {
+      } else if (item.type === 'recommendation') {
         const recommendation = item.data as MusicRecommendation
         const tracks = recommendation?.tracks || []
         return (
@@ -162,12 +164,70 @@ export function HistoryList({ className = '' }: HistoryListProps) {
             track?.artist?.toLowerCase().includes(query)
           )
         )
+      } else {
+        // For individual tracks
+        const track = item.data as Track
+        return (
+          track?.name?.toLowerCase().includes(query) ||
+          track?.artist?.toLowerCase().includes(query) ||
+          track?.album?.toLowerCase().includes(query)
+        )
       }
     } catch (err) {
       console.warn('Error filtering history item:', item, err)
       return false
     }
   })
+
+  // Remove duplicate tracks by ID, keeping the most recent ones
+  const removeDuplicateTracks = (historyItems: HistoryEntry[]): HistoryEntry[] => {
+    const seenTrackIds = new Set<string>();
+    // Reverse the array to process newest items first
+    const reversedHistory = [...historyItems].reverse(); 
+    
+    const uniqueReversed = reversedHistory.filter(item => {
+      if (item.type === 'track') {
+        const track = item.data as Track;
+        if (seenTrackIds.has(track.id)) {
+          return false; // Skip this duplicate (which is the older one)
+        }
+        seenTrackIds.add(track.id);
+        return true;
+      }
+      return true;
+    });
+
+    // Reverse back to original order
+    return uniqueReversed.reverse();
+  };
+
+  // Apply duplicate removal to the filtered history
+  const uniqueHistory = removeDuplicateTracks(filteredHistory);
+
+  // New UX: Separate last saved song and group the rest by emotion
+  const lastSavedSong = uniqueHistory.length > 0 && type === 'songs' ? uniqueHistory[0] : null;
+  const restOfHistory = uniqueHistory.length > 0 && type === 'songs' ? uniqueHistory.slice(1) : uniqueHistory;
+
+  // Group history by emotion (for the rest of the history)
+  const groupedByEmotion = restOfHistory.reduce((acc, item) => {
+    let emotion: EmotionType | 'unknown' = 'unknown';
+    if (item.type === 'recommendation') {
+      const recommendationData = item.data as MusicRecommendation;
+      emotion = recommendationData.emotion || 'unknown';
+    } else if (item.type === 'emotion') {
+      const emotionData = item.data as EmotionResult;
+      emotion = emotionData.emotion;
+    } else {
+      return acc; // Ignore other types
+    }
+
+    if (!acc[emotion]) {
+      acc[emotion] = [];
+    }
+    acc[emotion].push(item);
+
+    return acc;
+  }, {} as Record<string, HistoryEntry[]>);
 
   const getEmotionColor = (emotion: EmotionType): string => {
     const colors = {
@@ -182,101 +242,40 @@ export function HistoryList({ className = '' }: HistoryListProps) {
     return colors[emotion] || colors.neutral
   }
 
+  const getEmotionDotColor = (emotion: EmotionType): string => {
+    const colors = {
+      happy: 'bg-yellow-500',
+      sad: 'bg-blue-500',
+      angry: 'bg-red-500',
+      surprised: 'bg-orange-500',
+      neutral: 'bg-gray-500',
+      fear: 'bg-purple-500',
+      disgust: 'bg-green-500'
+    };
+    return colors[emotion] || colors.neutral;
+  };
+
   if (loading && history.length === 0) {
     return <Loading message="Loading your history..." />
   }
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Search and Actions Bar */}
+      {/* Search and Actions Bar (simplified for now) */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          {/* Search */}
-          <div className="flex-1 w-full">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search your history..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block text-gray-900 w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder:text-gray-500"
-              />
+        <div className="flex-1 w-full">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <FunnelIcon className="h-4 w-4 mr-2" />
-              Filters
-            </button>
-            
-            <div className="relative">
-              <button
-                onClick={() => handleExport('json')}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 bg-white hover:bg-gray-50"
-              >
-                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                Export
-              </button>
-            </div>
-
-            {selectedItems.size > 0 && (
-              <button
-                onClick={handleDeleteSelected}
-                className="inline-flex items-center px-3 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100"
-              >
-                <TrashIcon className="h-4 w-4 mr-2" />
-                Delete ({selectedItems.size})
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Filters Panel */}
-        {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <HistoryFiltersComponent
-              filters={filters}
-              onFiltersChange={handleFilterChange}
+            <input
+              type="text"
+              placeholder="Search your history..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block text-gray-900 w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder:text-gray-500"
             />
           </div>
-        )}
-      </div>
-
-      {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Total Entries
-          </h3>
-          <p className="text-3xl font-bold text-purple-600">
-            {pagination.total}
-          </p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Emotions Analyzed
-          </h3>
-          <p className="text-3xl font-bold text-blue-600">
-            {history.filter(item => item.type === 'emotion').length}
-          </p>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Recommendations
-          </h3>
-          <p className="text-3xl font-bold text-green-600">
-            {history.filter(item => item.type === 'recommendation').length}
-          </p>
         </div>
       </div>
 
@@ -287,60 +286,83 @@ export function HistoryList({ className = '' }: HistoryListProps) {
         </div>
       )}
 
-      {/* History List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        {filteredHistory.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600">
-              {searchQuery ? 'No results found for your search.' : 'No history entries found.'}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Select All Header */}
-            <div className="px-6 py-4 border-b border-gray-200">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedItems.size === filteredHistory.length && filteredHistory.length > 0}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-900">
-                  Select all ({filteredHistory.length} items)
-                </span>
-              </label>
-            </div>
+      {/* Conditional Rendering based on type */}
+      {type === 'songs' ? (
+        // New UX for saved songs
+        <div className="space-y-12">
+          {/* Last Saved Song */}
+          {lastSavedSong && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Last Saved Song</h2>
+                              <HistoryItemCard
+                                item={lastSavedSong}
+                                variant="featured"
+                                getEmotionColor={getEmotionColor}
+                                getEmotionDotColor={getEmotionDotColor}
+                              />            </div>
+          )}
 
-            {/* History Items */}
+          {/* Rest of the history grouped by emotion */}
+          {Object.keys(groupedByEmotion).length > 0 && (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Your Saved Library</h2>
+              <div className="space-y-8">
+                {Object.entries(groupedByEmotion).map(([emotion, items]) => (
+                  <div key={emotion}>
+                    <h3 className="text-xl font-semibold text-gray-800 mb-3 capitalize flex items-center">
+                      <span className={`w-4 h-4 rounded-full mr-3 ${getEmotionDotColor(emotion as EmotionType)}`}></span>
+                      {emotion}
+                    </h3>
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 divide-y divide-gray-200">
+                      {items.map(item => (
+                        <HistoryItemCard
+                          key={`${item.type}-${item.id}`}
+                          item={item}
+                          getEmotionColor={getEmotionColor}
+                          getEmotionDotColor={getEmotionDotColor}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {uniqueHistory.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-600">
+                {searchQuery ? 'No results found for your search.' : 'No saved songs found.'}
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        // Simple list view for emotions
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          {uniqueHistory.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600">
+                {searchQuery ? 'No results found for your search.' : 'No emotion history found.'}
+              </p>
+            </div>
+          ) : (
             <div className="divide-y divide-gray-200">
-              {filteredHistory.map((item) => (
+              {uniqueHistory.map((item) => (
                 <HistoryItemCard
-                  key={item.id}
+                  key={`${item.type}-${item.id}`}
                   item={item}
                   selected={selectedItems.has(item.id)}
                   onSelect={(selected) => handleSelectItem(item.id, selected)}
                   onDelete={() => handleDeleteItem(item.id)}
                   getEmotionColor={getEmotionColor}
+                  getEmotionDotColor={getEmotionDotColor}
                 />
               ))}
             </div>
-
-            {/* Load More Button */}
-            {pagination.hasMore && (
-              <div className="p-6 text-center border-t border-gray-200">
-                <button
-                  onClick={handleLoadMore}
-                  disabled={loading}
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Loading...' : 'Load More'}
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

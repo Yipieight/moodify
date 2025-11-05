@@ -10,7 +10,8 @@ import {
   ArrowTopRightOnSquareIcon,
   HeartIcon,
   PlusIcon,
-  EllipsisHorizontalIcon
+  EllipsisHorizontalIcon,
+  BookmarkIcon
 } from "@heroicons/react/24/outline"
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid"
 
@@ -18,12 +19,9 @@ interface TrackCardProps {
   track: Track
   isPlaying?: boolean
   isCurrentTrack?: boolean
-  onPlay: (track: Track) => void
-  onPause: () => void
+  onSaveTrack?: (track: Track) => void
   onTrackSelect?: (track: Track) => void
   onAddToPlaylist?: (track: Track) => void
-  onLike?: (track: Track) => void
-  isLiked?: boolean
   showIndex?: boolean
   index?: number
   variant?: 'default' | 'compact' | 'detailed'
@@ -35,12 +33,9 @@ export function TrackCard({
   track,
   isPlaying = false,
   isCurrentTrack = false,
-  onPlay,
-  onPause,
+  onSaveTrack,
   onTrackSelect,
   onAddToPlaylist,
-  onLike,
-  isLiked = false,
   showIndex = false,
   index,
   variant = 'default',
@@ -56,24 +51,19 @@ export function TrackCard({
   }, [isModalOpen])
   const [showMenu, setShowMenu] = useState(false)
 
-  const handlePlayPause = () => {
-    // Call onPlay to potentially trigger playback
-    onPlay(track)
-    
-    // Also call onTrackSelect to show track information
-    onTrackSelect?.(track)
+  const handleSaveTrack = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSaveTrack?.(track)
   }
 
-  const handleLike = () => {
-    onLike?.(track)
-  }
-
-  const handleAddToPlaylist = () => {
+  const handleAddToPlaylist = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onAddToPlaylist?.(track)
     setShowMenu(false)
   }
 
-  const openInSpotify = () => {
+  const openInSpotify = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (track.spotifyUrl) {
       window.open(track.spotifyUrl, '_blank')
     }
@@ -87,25 +77,13 @@ export function TrackCard({
         } ${className}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onClick={() => onTrackSelect?.(track)}
       >
-        {/* Index or Play Button */}
+        {/* Index */}
         <div className="w-8 text-center mr-4 transition-all duration-200">
-          {isHovered || isCurrentTrack ? (
-            <button
-              onClick={handlePlayPause}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-purple-600 hover:bg-purple-700 text-white transition-all duration-200 transform hover:scale-105"
-            >
-              {isCurrentTrack && isPlaying ? (
-                <PauseIcon className="w-4 h-4" />
-              ) : (
-                <PlayIcon className="w-4 h-4" />
-              )}
-            </button>
-          ) : (
-            <span className="text-gray-500 text-sm transition-opacity duration-200">
+          <span className="text-gray-500 text-sm transition-opacity duration-200">
               {showIndex && index !== undefined ? index + 1 : '♪'}
             </span>
-          )}
         </div>
 
         {/* Track Info */}
@@ -121,19 +99,6 @@ export function TrackCard({
 
         {/* Actions */}
         <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out">
-          {onLike && (
-            <button
-              onClick={handleLike}
-              className="p-1 text-gray-500 hover:text-red-500 transition-all duration-200"
-            >
-              {isLiked ? (
-                <HeartIconSolid className="w-5 h-5 text-red-500" />
-              ) : (
-                <HeartIcon className="w-5 h-5" />
-              )}
-            </button>
-          )}
-          
           <button
             onClick={openInSpotify}
             className="p-1 text-gray-500 hover:text-green-600 transition-all duration-200"
@@ -155,8 +120,8 @@ export function TrackCard({
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="p-4">
-        {/* Track Image and Play Button */}
-        <div className="relative mb-4">
+        {/* Track Image */}
+        <div className="relative mb-4 cursor-pointer" onClick={() => onTrackSelect?.(track)}>
           {track.imageUrl ? (
             <img
               src={track.imageUrl}
@@ -169,22 +134,6 @@ export function TrackCard({
             </div>
           )}
 
-          {/* Play/Pause Overlay */}
-          <div className={`absolute inset-0 bg-purple-900 bg-opacity-60 rounded-lg flex items-center justify-center transition-all duration-200 ${
-            isHovered || isCurrentTrack ? 'opacity-100' : 'opacity-0'
-          }`}>
-            <button
-              onClick={handlePlayPause}
-              className="w-12 h-12 bg-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
-            >
-              {isCurrentTrack && isPlaying ? (
-                <PauseIcon className="w-6 h-6 text-gray-900" />
-              ) : (
-                <PlayIcon className="w-6 h-6 text-gray-900 ml-0.5" />
-              )}
-            </button>
-          </div>
-
           {/* Preview Indicator */}
           {!track.previewUrl && (
             <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded transition-opacity duration-200">
@@ -195,7 +144,7 @@ export function TrackCard({
 
         {/* Track Info */}
         <div className="mb-3 transition-all duration-200">
-          <h3 className="font-semibold text-gray-900 truncate mb-1">{track.name}</h3>
+          <h3 className="font-semibold text-gray-900 truncate mb-1 cursor-pointer" onClick={() => onTrackSelect?.(track)}>{track.name}</h3>
           <p className="text-gray-600 truncate mb-1">{track.artist}</p>
           <p className="text-sm text-gray-500 truncate">{track.album}</p>
         </div>
@@ -213,20 +162,15 @@ export function TrackCard({
         {/* Actions */}
         <div className="flex items-center justify-between transition-all duration-200">
           <div className="flex items-center space-x-2">
-            {onLike && (
+            {onSaveTrack && (
               <button
-                onClick={handleLike}
-                className="p-2 text-gray-500 hover:text-red-500 transition-all duration-200"
-                title={isLiked ? "Unlike" : "Like"}
+                onClick={handleSaveTrack}
+                className="p-2 text-gray-500 hover:text-purple-600 transition-all duration-200"
+                title="Save to History"
               >
-                {isLiked ? (
-                  <HeartIconSolid className="w-5 h-5 text-red-500" />
-                ) : (
-                  <HeartIcon className="w-5 h-5" />
-                )}
+                <BookmarkIcon className="w-5 h-5" />
               </button>
             )}
-
             {onAddToPlaylist && (
               <button
                 onClick={handleAddToPlaylist}
@@ -240,7 +184,7 @@ export function TrackCard({
             {/* More options menu */}
             <div className="relative">
               <button
-                onClick={() => setShowMenu(!showMenu)}
+                onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                 className="p-2 text-gray-500 hover:text-gray-700 transition-all duration-200"
               >
                 <EllipsisHorizontalIcon className="w-5 h-5" />

@@ -22,6 +22,7 @@ export default function CapturePage() {
   const [captureMode, setCaptureMode] = useState<CaptureMode>('select')
   const [analysisStep, setAnalysisStep] = useState<AnalysisStep>('capture')
   const [emotionResult, setEmotionResult] = useState<EmotionResult | null>(null)
+  const [emotionAnalysisId, setEmotionAnalysisId] = useState<string | null>(null)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -65,8 +66,11 @@ export default function CapturePage() {
       setEmotionResult(emotionWithImage)
       setAnalysisStep('results')
       
-      // Save to history automatically
-      await saveEmotion(emotionWithImage)
+      // Save to history automatically and get the ID
+      const savedEntry = await saveEmotion(emotionWithImage)
+      if (savedEntry) {
+        setEmotionAnalysisId(savedEntry.id)
+      }
     } catch (error) {
       console.error('Failed to save emotion to history:', error)
       setSaveError('Failed to save your emotion analysis to history. You can still view the results.')
@@ -261,6 +265,7 @@ export default function CapturePage() {
               confidence={emotionResult.confidence}
               imageUrl={capturedImage || (uploadedFile ? URL.createObjectURL(uploadedFile) : undefined)}
               timestamp={emotionResult.timestamp}
+              emotionAnalysisId={emotionAnalysisId}
               showActions={true}
               showHistory={true}
             />
