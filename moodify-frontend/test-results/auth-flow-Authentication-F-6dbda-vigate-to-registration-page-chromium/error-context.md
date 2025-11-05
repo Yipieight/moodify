@@ -1,0 +1,57 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - link "Back to home" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - text: Back to home
+      - generic [ref=e9]:
+        - generic [ref=e11]: M
+        - generic [ref=e12]: Moodify
+      - generic [ref=e13]:
+        - heading "Create your account" [level=2] [ref=e14]
+        - paragraph [ref=e15]: Start discovering music that matches your mood
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]: Full Name
+        - textbox "Full Name" [ref=e22]:
+          - /placeholder: Enter your full name
+      - generic [ref=e23]:
+        - generic [ref=e24]: Email Address
+        - textbox "Email Address" [ref=e25]:
+          - /placeholder: Enter your email
+      - generic [ref=e26]:
+        - generic [ref=e27]: Password
+        - generic [ref=e28]:
+          - textbox "Password" [ref=e29]:
+            - /placeholder: Create a password
+          - button [ref=e30]:
+            - img [ref=e31]
+      - generic [ref=e34]:
+        - generic [ref=e35]: Confirm Password
+        - generic [ref=e36]:
+          - textbox "Confirm Password" [ref=e37]:
+            - /placeholder: Confirm your password
+          - button [ref=e38]:
+            - img [ref=e39]
+      - button "Create Account" [ref=e42]
+      - generic [ref=e47]: Or sign up with
+      - button "Sign up with Spotify" [ref=e48]:
+        - img [ref=e49]
+        - text: Sign up with Spotify
+      - paragraph [ref=e52]:
+        - text: Already have an account?
+        - link "Sign in" [ref=e53] [cursor=pointer]:
+          - /url: /auth/login
+    - paragraph [ref=e55]:
+      - text: By creating an account, you agree to our
+      - link "Terms of Service" [ref=e56] [cursor=pointer]:
+        - /url: "#"
+      - text: and
+      - link "Privacy Policy" [ref=e57] [cursor=pointer]:
+        - /url: "#"
+  - alert [ref=e58]
+```

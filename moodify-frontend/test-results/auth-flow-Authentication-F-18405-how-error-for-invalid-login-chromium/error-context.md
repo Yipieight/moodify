@@ -1,0 +1,49 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - link "Back to home" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - text: Back to home
+      - generic [ref=e9]:
+        - generic [ref=e11]: M
+        - generic [ref=e12]: Moodify
+      - generic [ref=e13]:
+        - heading "Welcome back" [level=2] [ref=e14]
+        - paragraph [ref=e15]: Sign in to continue your musical journey
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]: Email Address
+        - textbox "Email Address" [ref=e22]:
+          - /placeholder: Enter your email
+          - text: invalid@example.com
+      - generic [ref=e23]:
+        - generic [ref=e24]: Password
+        - generic [ref=e25]:
+          - textbox "Password" [ref=e26]:
+            - /placeholder: Enter your password
+            - text: wrongpassword
+          - button [ref=e27]:
+            - img [ref=e28]
+      - paragraph [ref=e32]: Invalid email or password
+      - button "Sign In" [ref=e33]
+      - generic [ref=e38]: Or continue with
+      - button "Continue with Spotify" [ref=e39]:
+        - img [ref=e40]
+        - text: Continue with Spotify
+      - paragraph [ref=e43]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=e44] [cursor=pointer]:
+          - /url: /auth/register
+    - paragraph [ref=e46]:
+      - text: By signing in, you agree to our
+      - link "Terms of Service" [ref=e47] [cursor=pointer]:
+        - /url: "#"
+      - text: and
+      - link "Privacy Policy" [ref=e48] [cursor=pointer]:
+        - /url: "#"
+  - alert [ref=e49]
+```
