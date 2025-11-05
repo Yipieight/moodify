@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -9,26 +8,27 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model accounts {
-  id                  String    @id @default(uuid()) @db.Uuid
-  user_id             String    @db.Uuid
-  type                String    @db.VarChar(255)
-  provider            String    @db.VarChar(255)
-  provider_account_id String    @db.VarChar(255)
-  refresh_token       String?
-  access_token        String?
-  expires_at          Int?
-  token_type          String?   @db.VarChar(255)
-  scope               String?   @db.VarChar(255)
-  id_token            String?
-  session_state       String?   @db.VarChar(255)
-  created_at          DateTime? @default(now()) @db.Timestamp(6)
-  updated_at          DateTime? @default(now()) @db.Timestamp(6)
-  users               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+model Account {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  type              String    @db.VarChar(255)
+  provider          String    @db.VarChar(255)
+  providerAccountId String    @map("provider_account_id") @db.VarChar(255)
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?   @db.VarChar(255)
+  scope             String?   @db.VarChar(255)
+  id_token          String?
+  session_state     String?   @db.VarChar(255)
+  createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime? @default(now()) @map("updated_at") @db.Timestamp(6)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([provider, provider_account_id])
-  @@index([provider, provider_account_id], map: "idx_accounts_provider")
-  @@index([user_id], map: "idx_accounts_user_id")
+  @@unique([provider, providerAccountId])
+  @@index([provider, providerAccountId], map: "idx_accounts_provider")
+  @@index([userId], map: "idx_accounts_user_id")
+  @@map("accounts")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -40,7 +40,7 @@ model emotion_analyses {
   image_url             String?
   metadata              Json?
   created_at            DateTime?               @default(now()) @db.Timestamp(6)
-  users                 users                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                 User                    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   music_recommendations music_recommendations[]
 
   @@index([created_at], map: "idx_emotion_analyses_created_at")
@@ -68,7 +68,7 @@ model music_recommendations {
   user_rating         Int?
   created_at          DateTime?         @default(now()) @db.Timestamp(6)
   emotion_analyses    emotion_analyses? @relation(fields: [emotion_analysis_id], references: [id], onUpdate: NoAction)
-  users               users             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users               User              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([created_at], map: "idx_music_recommendations_created_at")
   @@index([emotion], map: "idx_music_recommendations_emotion")
@@ -76,16 +76,17 @@ model music_recommendations {
   @@index([user_id], map: "idx_music_recommendations_user_id")
 }
 
-model sessions {
-  id            String    @id @default(uuid()) @db.Uuid
-  session_token String    @unique @db.VarChar(255)
-  user_id       String    @db.Uuid
-  expires       DateTime  @db.Timestamp(6)
-  created_at    DateTime? @default(now()) @db.Timestamp(6)
-  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+model Session {
+  id           String    @id @default(uuid()) @db.Uuid
+  sessionToken String    @unique @map("session_token") @db.VarChar(255)
+  userId       String    @map("user_id") @db.Uuid
+  expires      DateTime  @db.Timestamp(6)
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([session_token], map: "idx_sessions_session_token")
-  @@index([user_id], map: "idx_sessions_user_id")
+  @@index([sessionToken], map: "idx_sessions_session_token")
+  @@index([userId], map: "idx_sessions_user_id")
+  @@map("sessions")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -98,7 +99,7 @@ model user_activity {
   ip_address    String?   @db.Inet
   user_agent    String?
   created_at    DateTime? @default(now()) @db.Timestamp(6)
-  users         users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users         User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([created_at], map: "idx_user_activity_created_at")
   @@index([activity_type], map: "idx_user_activity_type")
@@ -119,7 +120,7 @@ model user_preferences {
   privacy_settings         Json?     @default("{}")
   created_at               DateTime? @default(now()) @db.Timestamp(6)
   updated_at               DateTime? @default(now()) @db.Timestamp(6)
-  users                    users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                    User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id], map: "idx_user_preferences_user_id")
 }
@@ -135,35 +136,37 @@ model user_statistics {
   last_activity         DateTime? @db.Timestamp(6)
   statistics_data       Json?
   calculated_at         DateTime? @default(now()) @db.Timestamp(6)
-  users                 users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                 User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id], map: "idx_user_statistics_user_id")
 }
 
-model users {
+model User {
   id                    String                  @id @default(uuid()) @db.Uuid
   name                  String?                 @db.VarChar(255)
   email                 String                  @unique @db.VarChar(255)
   password              String?
-  email_verified        DateTime?               @db.Timestamp(6)
+  emailVerified         DateTime?               @map("email_verified") @db.Timestamp(6)
   image                 String?
-  created_at            DateTime?               @default(now()) @db.Timestamp(6)
-  updated_at            DateTime?               @default(now()) @db.Timestamp(6)
-  accounts              accounts[]
+  createdAt             DateTime?               @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt             DateTime?               @default(now()) @map("updated_at") @db.Timestamp(6)
+  accounts              Account[]
   emotion_analyses      emotion_analyses[]
   music_recommendations music_recommendations[]
-  sessions              sessions[]
+  sessions              Session[]
   user_activity         user_activity[]
   user_preferences      user_preferences?
   user_statistics       user_statistics?
 
   @@index([email], map: "idx_users_email")
+  @@map("users")
 }
 
-model verification_tokens {
+model VerificationToken {
   token      String   @id @db.VarChar(255)
   identifier String   @db.VarChar(255)
   expires    DateTime @db.Timestamp(6)
 
   @@unique([identifier, token])
+  @@map("verification_tokens")
 }

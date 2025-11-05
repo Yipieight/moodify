@@ -1,0 +1,356 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '18.x'
+  DOCKER_REGISTRY: 539247485597.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REPOSITORY: moodify
+
+jobs:
+  # ==========================================
+  # FRONTEND TESTS
+  # ==========================================
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+
+      - name: Run linter
+        run: pnpm run lint || echo "Linting warnings found"
+
+      - name: Run unit tests
+        run: pnpm test -- --coverage --passWithNoTests
+        env:
+          NODE_ENV: test
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+          flags: frontend
+
+  # ==========================================
+  # BACKEND TESTS
+  # ==========================================
+  backend-tests:
+    name: Backend API Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: moodify_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup test database
+        run: |
+          npx prisma generate
+          npx prisma db push --skip-generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/moodify_test
+
+      - name: Run API tests
+        run: pnpm test:api
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/moodify_test
+          NEXTAUTH_SECRET: test-secret-key-for-ci
+          NEXTAUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+
+  # ==========================================
+  # E2E TESTS (Optional - run on main branch only)
+  # ==========================================
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+
+      - name: Build application
+        run: pnpm build
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: playwright-report/
+
+  # ==========================================
+  # INFRASTRUCTURE TESTS
+  # ==========================================
+  infrastructure-tests:
+    name: Infrastructure Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: moodify:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DATABASE_URL=postgresql://test:test@localhost:5432/test
+
+      - name: Test Docker image
+        run: |
+          docker run -d --name moodify-test \
+            -p 3000:3000 \
+            -e DATABASE_URL=postgresql://test:test@host.docker.internal:5432/test \
+            -e NEXTAUTH_SECRET=test-secret \
+            -e NEXTAUTH_URL=http://localhost:3000 \
+            moodify:test
+          
+          # Wait for container to be healthy
+          sleep 10
+          
+          # Check if container is running
+          docker ps | grep moodify-test
+          
+          # Test health endpoint (if you have one)
+          # curl -f http://localhost:3000/api/health || exit 1
+          
+          # Check logs for errors
+          docker logs moodify-test | grep -i "error" && exit 1 || echo "No errors in logs"
+          
+          # Cleanup
+          docker stop moodify-test
+          docker rm moodify-test
+
+      - name: Check image size
+        run: |
+          SIZE=$(docker image inspect moodify:test --format='{{.Size}}')
+          SIZE_MB=$((SIZE / 1024 / 1024))
+          echo "Docker image size: ${SIZE_MB}MB"
+          if [ $SIZE_MB -gt 800 ]; then
+            echo "Warning: Image size exceeds 800MB"
+            exit 1
+          fi
+
+  # ==========================================
+  # DATA/DATABASE TESTS
+  # ==========================================
+  database-tests:
+    name: Database & Schema Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: moodify_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Test database migrations
+        run: npx prisma db push
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/moodify_test
+
+      - name: Run database integrity tests
+        run: pnpm test:db
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/moodify_test
+
+      - name: Test seed data (if applicable)
+        run: npx prisma db seed || echo "No seed script defined"
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/moodify_test
+
+  # ==========================================
+  # BUILD & DEPLOY (only on main branch)
+  # ==========================================
+  build-and-deploy:
+    name: Build and Deploy to ECS
+    needs: [frontend-tests, backend-tests, infrastructure-tests, database-tests]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+            ${{ env.DOCKER_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster moodify-prod-cluster \
+            --service moodify-prod-service \
+            --force-new-deployment \
+            --region us-east-1
+
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster moodify-prod-cluster \
+            --services moodify-prod-service \
+            --region us-east-1
+
+      - name: Verify deployment
+        run: |
+          # Check if service is running
+          RUNNING_COUNT=$(aws ecs describe-services \
+            --cluster moodify-prod-cluster \
+            --services moodify-prod-service \
+            --region us-east-1 \
+            --query 'services[0].runningCount' \
+            --output text)
+          
+          if [ "$RUNNING_COUNT" -lt 1 ]; then
+            echo "Deployment failed: No running tasks"
+            exit 1
+          fi
+          
+          echo "Deployment successful: $RUNNING_COUNT tasks running"
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+          fi
+

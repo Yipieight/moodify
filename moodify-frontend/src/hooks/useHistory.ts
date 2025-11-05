@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { historyService, HistoryEntry, HistoryFilters, AnalyticsData } from '@/lib/historyService'
-import { EmotionResult, MusicRecommendation, Track } from '@/types'
+import { EmotionResult, MusicRecommendation, Track, EmotionType } from '@/types'
 
 interface UseHistoryReturn {
   history: HistoryEntry[]
@@ -10,7 +10,7 @@ interface UseHistoryReturn {
   loading: boolean
   error: string | null
   loadHistory: (filters?: HistoryFilters) => Promise<void>
-  saveEmotion: (emotion: EmotionResult) => Promise<void>
+  saveEmotion: (emotion: EmotionResult) => Promise<HistoryEntry>
   saveRecommendation: (recommendation: MusicRecommendation) => Promise<void>
   saveTrack: (track: Track, emotion?: EmotionType, emotionAnalysisId?: string | null) => Promise<void>
   deleteEntry: (entryId: string) => Promise<void>

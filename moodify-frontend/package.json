@@ -10,6 +10,10 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:unit": "jest src/__tests__/unit/",
+    "test:api": "jest src/__tests__/integration/api/",
+    "test:db": "jest src/__tests__/db/",
+    "test:e2e": "playwright test",
     "test:bun": "bun test",
     "test:bun:watch": "bun test --watch",
     "db:generate": "prisma generate",
@@ -47,6 +51,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",

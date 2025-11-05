@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { historyService, HistoryEntry, HistoryFilters } from '@/lib/historyService'
-import { EmotionResult, MusicRecommendation, EmotionType } from '@/types'
+import { EmotionResult, MusicRecommendation, EmotionType, Track } from '@/types'
 import { HistoryItemCard } from './HistoryItemCard'
 import { HistoryFilters as HistoryFiltersComponent } from './HistoryFilters'
 import { Loading } from '@/components/ui/Loading'

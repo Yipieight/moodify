@@ -27,11 +27,10 @@ RUN \
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies and generated Prisma client from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/src/generated ./src/generated
-
-# Copy all source files
+    # Copy dependencies from deps stage (includes Prisma client in node_modules)
+    COPY --from=deps /app/node_modules ./node_modules
+    
+    # Copy all source files
 COPY . .
 
 # Environment variables for build
@@ -82,9 +81,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy face-api.js models if they exist
 COPY --from=builder /app/public/models ./public/models
-
-# Copy Prisma generated client
-COPY --from=builder /app/src/generated ./src/generated
 
 USER nextjs
 

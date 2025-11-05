@@ -219,8 +219,6 @@ export function RecommendationList({
             track={track}
             onTrackSelect={onTrackSelect}
             onSaveTrack={onSaveTrack}
-            onLike={handleLike}
-            isLiked={likedTracks.has(track.id)}
             showIndex={variant === 'list'}
             index={index}
             variant={variant === 'list' ? 'compact' : 'default'}
