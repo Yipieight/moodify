@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { Track, EmotionType } from "@/types"
 import { TrackCard } from "./TrackCard"
 import { MusicPlayer } from "./MusicPlayer"
@@ -20,6 +20,7 @@ import {
 interface RecommendationListProps {
   tracks: Track[]
   onTrackSelect: (track: Track) => void
+  onSaveTrack?: (track: Track) => void  // New prop to handle track saving
   selectedTrack?: Track | null
   loading?: boolean
   emotion?: EmotionType
@@ -37,6 +38,7 @@ type FilterOption = 'all' | 'with-preview' | 'popular'
 export function RecommendationList({
   tracks,
   onTrackSelect,
+  onSaveTrack,
   selectedTrack = null,
   loading = false,
   emotion,
@@ -47,8 +49,6 @@ export function RecommendationList({
   className = "",
   isModalOpen = false
 }: RecommendationListProps) {
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState<SortOption>('popularity')
   const [filterBy, setFilterBy] = useState<FilterOption>('all')
@@ -98,48 +98,6 @@ export function RecommendationList({
     return filtered
   }, [tracks, searchQuery, sortBy, filterBy])
 
-  const handleTrackPlay = (track: Track) => {
-    setCurrentTrack(track)
-    setIsPlaying(true)
-    onTrackSelect(track)
-  }
-
-  const handlePause = () => {
-    setIsPlaying(false)
-  }
-
-  const handleNext = () => {
-    if (!currentTrack) return
-    
-    const currentIndex = filteredAndSortedTracks.findIndex(t => t.id === currentTrack.id)
-    const nextIndex = (currentIndex + 1) % filteredAndSortedTracks.length
-    const nextTrack = filteredAndSortedTracks[nextIndex]
-    
-    if (nextTrack) {
-      handleTrackPlay(nextTrack)
-    }
-  }
-
-  const handlePrevious = () => {
-    if (!currentTrack) return
-    
-    const currentIndex = filteredAndSortedTracks.findIndex(t => t.id === currentTrack.id)
-    const prevIndex = currentIndex === 0 ? filteredAndSortedTracks.length - 1 : currentIndex - 1
-    const prevTrack = filteredAndSortedTracks[prevIndex]
-    
-    if (prevTrack) {
-      handleTrackPlay(prevTrack)
-    }
-  }
-
-  const handleShuffle = () => {
-    if (filteredAndSortedTracks.length === 0) return
-    
-    const randomIndex = Math.floor(Math.random() * filteredAndSortedTracks.length)
-    const randomTrack = filteredAndSortedTracks[randomIndex]
-    handleTrackPlay(randomTrack)
-  }
-
   const handleLike = (track: Track) => {
     const newLikedTracks = new Set(likedTracks)
     if (likedTracks.has(track.id)) {
@@ -187,14 +145,7 @@ export function RecommendationList({
         </div>
 
         {/* Shuffle Button */}
-        <button
-          onClick={handleShuffle}
-          disabled={filteredAndSortedTracks.length === 0}
-          className="flex items-center space-x-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
-        >
-          <ArrowPathIcon className="w-4 h-4" />
-          <span>Shuffle</span>
-        </button>
+
       </div>
 
       {/* Filters and Search */}
@@ -266,11 +217,8 @@ export function RecommendationList({
           <TrackCard
             key={track.id}
             track={track}
-            isPlaying={isPlaying}
-            isCurrentTrack={currentTrack?.id === track.id}
-            onPlay={handleTrackPlay}
-            onPause={handlePause}
             onTrackSelect={onTrackSelect}
+            onSaveTrack={onSaveTrack}
             onLike={handleLike}
             isLiked={likedTracks.has(track.id)}
             showIndex={variant === 'list'}

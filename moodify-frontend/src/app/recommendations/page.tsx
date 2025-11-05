@@ -8,6 +8,7 @@ import { Loading } from "@/components/ui/Loading"
 import { RecommendationList } from "@/components/music/RecommendationList"
 import { TrackModal } from "@/components/music/TrackModal"
 import { useHistory } from "@/hooks/useHistory"
+import { useToast, toast } from "@/components/ui/Toast"
 import { EmotionType, Track, MusicRecommendation } from "@/types"
 import { 
   ArrowLeftIcon, 
@@ -30,19 +31,20 @@ export default function RecommendationsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { saveRecommendation } = useHistory()
+  const { saveTrack } = useHistory()
+  const { addToast } = useToast()
   
   const [tracks, setTracks] = useState<Track[]>([])
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [savedToHistory, setSavedToHistory] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Get emotion data from URL params
   const emotion = searchParams.get('emotion') as EmotionType || 'neutral'
   const confidence = parseFloat(searchParams.get('confidence') || '0.5')
+  const emotionAnalysisId = searchParams.get('emotionAnalysisId')
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -85,9 +87,6 @@ export default function RecommendationsPage() {
 
       setTracks(data.data.tracks || [])
       
-      // Auto-save recommendation to history
-      await saveRecommendationToHistory(data.data.tracks || [])
-      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load recommendations'
       setError(errorMessage)
@@ -97,29 +96,21 @@ export default function RecommendationsPage() {
     }
   }
 
-  const saveRecommendationToHistory = async (recommendedTracks: Track[]) => {
-    try {
-      const recommendation: MusicRecommendation = {
-        id: `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        userId: session?.user?.email || '',
-        emotion,
-        tracks: recommendedTracks,
-        createdAt: new Date()
-      }
-
-      await saveRecommendation(recommendation)
-      setSavedToHistory(true)
-    } catch (error) {
-      console.error('Failed to save recommendation to history:', error)
-      // Don't show error to user since this is background functionality
-    }
-  }
-
   const handleTrackSelect = (track: Track) => {
     // Set the selected track and open the modal
     setCurrentTrack(track)
     setIsModalOpen(true)
     console.log('Selected track:', track)
+  }
+
+  const handleSaveTrack = async (track: Track) => {
+    try {
+      await saveTrack(track, emotion as EmotionType, emotionAnalysisId);
+      addToast(toast.success('Track Saved', `'${track.name}' has been added to your history.`));
+    } catch (error) {
+      console.error('Failed to save track to history:', error);
+      addToast(toast.error('Failed to Save Track', 'There was an issue saving this track. Please try again.'));
+    }
   }
 
   const closeModal = () => {
@@ -162,14 +153,6 @@ export default function RecommendationsPage() {
                 Feeling: <span className="capitalize font-semibold text-gray-900">{emotion}</span>
               </span>
             </div>
-            {savedToHistory && (
-              <div className="flex items-center space-x-1 text-green-600 text-sm">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span>Saved to history</span>
-              </div>
-            )}
           </div>
           
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -231,10 +214,12 @@ export default function RecommendationsPage() {
             <RecommendationList
               tracks={tracks}
               onTrackSelect={handleTrackSelect}
+              onSaveTrack={handleSaveTrack}
               selectedTrack={currentTrack}
               loading={loading}
               showPlayer={false} // Don't show the embedded player
               isModalOpen={isModalOpen}
+              emotion={emotion}
             />
           </div>
         )}

@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { HistoryEntry } from '@/lib/historyService'
-import { EmotionResult, MusicRecommendation, EmotionType } from '@/types'
+import { 
+  EmotionResult, MusicRecommendation, Track, EmotionType 
+} from '@/types'
 import { 
   FaceSmileIcon,
   MusicalNoteIcon,
@@ -16,18 +18,22 @@ import {
 
 interface HistoryItemCardProps {
   item: HistoryEntry
-  selected: boolean
-  onSelect: (selected: boolean) => void
-  onDelete: () => void
+  selected?: boolean
+  onSelect?: (selected: boolean) => void
+  onDelete?: () => void
   getEmotionColor: (emotion: EmotionType) => string
+  getEmotionDotColor?: (emotion: EmotionType) => string
+  variant?: 'default' | 'featured'
 }
 
 export function HistoryItemCard({ 
   item, 
-  selected, 
-  onSelect, 
-  onDelete, 
-  getEmotionColor 
+  selected = false, 
+  onSelect = () => {},
+  onDelete = () => {},
+  getEmotionColor,
+  getEmotionDotColor = () => 'bg-gray-500',
+  variant = 'default'
 }: HistoryItemCardProps) {
   const [expanded, setExpanded] = useState(false)
 
@@ -44,6 +50,37 @@ export function HistoryItemCard({
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  if (variant === 'featured') {
+    if (item.type !== 'recommendation') return null;
+
+    const recommendation = item.data as MusicRecommendation;
+    const track = recommendation.tracks[0];
+    const emotion = recommendation.emotion;
+
+    return (
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+        {track.imageUrl && (
+            <img src={track.imageUrl} alt={track.name} className="w-32 h-32 rounded-lg object-cover shadow-md"/>
+        )}
+        <div className="flex-1 text-center md:text-left">
+            <p className="text-sm text-gray-500">Your last saved song</p>
+            <h3 className="text-2xl font-bold text-gray-900 mt-1">{track.name}</h3>
+            <p className="text-lg text-gray-700">{track.artist}</p>
+            <div className="mt-3 inline-flex items-center space-x-2 bg-gray-100 rounded-full px-3 py-1">
+                <span className={`w-3 h-3 rounded-full ${getEmotionDotColor(emotion)}`}></span>
+                <span className="text-sm font-medium text-gray-800">Saved with emotion: <span className="font-bold capitalize">{emotion}</span></span>
+            </div>
+        </div>
+        <div className="flex flex-col items-center">
+             <a href={track.spotifyUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                <MusicalNoteIcon className="w-5 h-5" />
+                <span>Open in Spotify</span>
+            </a>
+        </div>
+      </div>
+    )
   }
 
   const renderEmotionDetails = (emotion: EmotionResult) => (
@@ -164,9 +201,77 @@ export function HistoryItemCard({
     </div>
   )}
 
-  const data = item.type === 'emotion' 
-    ? item.data as EmotionResult 
-    : item.data as MusicRecommendation
+  const renderTrackDetails = (track: Track & { emotion?: EmotionType }, emotion?: EmotionType) => (
+    <div className="space-y-3">
+      <div className="flex items-center space-x-3">
+        <MusicalNoteIcon className="h-6 w-6 text-green-500" />
+        <div>
+          <h3 className="font-semibold text-gray-900">Favorite Track</h3>
+          {emotion && (
+            <p className="text-sm text-gray-600">
+              Based on: <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getEmotionColor(emotion)}`}>
+                {emotion}
+              </span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="ml-9">
+        <div className="flex items-center space-x-4">
+          {track.imageUrl && (
+            <img 
+              src={track.imageUrl} 
+              alt={track.name}
+              className="w-16 h-16 object-cover rounded-lg"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-gray-900 truncate">{track.name}</h4>
+            <p className="text-gray-600 truncate">{track.artist}</p>
+            <p className="text-sm text-gray-500 truncate">{track.album}</p>
+            <div className="flex items-center mt-1 space-x-4">
+              <span className="text-sm text-gray-500">{track.duration} sec</span>
+              {track.popularity && (
+                <span className="text-sm text-gray-500">Popularity: {track.popularity}/100</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {expanded && (
+          <div className="mt-4 flex space-x-3">
+            {track.spotifyUrl && (
+              <a
+                href={track.spotifyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MusicalNoteIcon className="h-4 w-4 mr-1" />
+                Open in Spotify
+              </a>
+            )}
+            {track.previewUrl && (
+              <a
+                href={track.previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MusicalNoteIcon className="h-4 w-4 mr-1" />
+                Preview
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  const data = item.data
 
   return (
     <div className="p-6 hover:bg-gray-50 transition-colors">
@@ -220,10 +325,14 @@ export function HistoryItemCard({
           {/* Content based on type */}
           {item.type === 'emotion' 
             ? renderEmotionDetails(data as EmotionResult)
-            : renderRecommendationDetails(data as MusicRecommendation)
+            : item.type === 'recommendation'
+            ? renderRecommendationDetails(data as MusicRecommendation)
+            : renderTrackDetails(data as Track & { emotion?: EmotionType }, (data as Track & { emotion?: EmotionType }).emotion)
           }
         </div>
       </div>
     </div>
   )
 }
+
+export default HistoryItemCard

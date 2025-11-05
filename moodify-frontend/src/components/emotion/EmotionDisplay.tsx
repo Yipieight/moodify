@@ -26,6 +26,7 @@ interface EmotionDisplayProps {
   confidence: number
   imageUrl?: string
   timestamp?: Date
+  emotionAnalysisId?: string | null
   showActions?: boolean
   showHistory?: boolean
   detailedData?: FaceDetection | null
@@ -37,6 +38,7 @@ export function EmotionDisplay({
   confidence,
   imageUrl,
   timestamp = new Date(),
+  emotionAnalysisId,
   showActions = true,
   showHistory = false,
   detailedData
@@ -50,7 +52,11 @@ export function EmotionDisplay({
 
   const handleGetRecommendations = () => {
     // Navigate to recommendations page with emotion data
-    router.push(`/recommendations?emotion=${primaryEmotion}&confidence=${confidence}`)
+    let url = `/recommendations?emotion=${primaryEmotion}&confidence=${confidence}`;
+    if (emotionAnalysisId) {
+      url += `&emotionAnalysisId=${emotionAnalysisId}`;
+    }
+    router.push(url);
   }
 
   const handleSaveToHistory = async () => {

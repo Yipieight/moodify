@@ -1,10 +1,10 @@
-import { EmotionResult, MusicRecommendation, EmotionType } from '@/types'
+import { EmotionResult, MusicRecommendation, EmotionType, Track } from '@/types'
 
 export interface HistoryEntry {
   id: string
   userId: string
-  type: 'emotion' | 'recommendation'
-  data: EmotionResult | MusicRecommendation
+  type: 'emotion' | 'recommendation' | 'track'
+  data: EmotionResult | MusicRecommendation | Track
   createdAt: Date
 }
 
@@ -240,6 +240,40 @@ class HistoryService {
       emotionBreakdown,
       averageConfidence: Math.round(averageConfidence * 100) / 100
     }
+  }
+
+  /**
+   * Save an individual track to history
+   */
+  async saveTrack(track: Track, emotion?: EmotionType, emotionAnalysisId?: string | null): Promise<HistoryEntry> {
+    const payload = {
+      type: 'recommendation', // Change type to 'recommendation'
+      data: {
+        emotion: emotion || 'neutral', // Ensure emotion is present
+        tracks: [track], // Wrap track in a tracks array
+        emotion_analysis_id: emotionAnalysisId
+      }
+    };
+    console.log('Saving track as recommendation with payload:', payload);
+
+    const response = await fetch(this.baseUrl, { // Use the base URL
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to save track')
+    }
+
+    const result = await response.json()
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to save track')
+    }
+
+    return result.data
   }
 
   /**
