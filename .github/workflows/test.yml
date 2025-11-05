@@ -77,12 +77,14 @@ jobs:
         run: pnpm jest src/__tests__/db/ --verbose
         env:
           DATABASE_URL: postgresql://test:test123@localhost:5432/moodify_test
+          DIRECT_URL: postgresql://test:test123@localhost:5432/moodify_test
 
       - name: Run API tests
         working-directory: ./moodify-frontend
         run: pnpm jest src/__tests__/integration/api/ --verbose || echo "No API tests found yet"
         env:
           DATABASE_URL: postgresql://test:test123@localhost:5432/moodify_test
+          DIRECT_URL: postgresql://test:test123@localhost:5432/moodify_test
           NEXTAUTH_SECRET: test-secret-for-github-actions
           NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
@@ -159,18 +161,21 @@ jobs:
         run: npx prisma generate
         env:
           DATABASE_URL: postgresql://test:test123@localhost:5432/moodify_test
+          DIRECT_URL: postgresql://test:test123@localhost:5432/moodify_test
 
       - name: Push schema to test database
         working-directory: ./moodify-frontend
         run: npx prisma db push --skip-generate
         env:
           DATABASE_URL: postgresql://test:test123@localhost:5432/moodify_test
+          DIRECT_URL: postgresql://test:test123@localhost:5432/moodify_test
 
       - name: Build Next.js application
         working-directory: ./moodify-frontend
         run: pnpm build
         env:
           DATABASE_URL: postgresql://test:test123@localhost:5432/moodify_test
+          DIRECT_URL: postgresql://test:test123@localhost:5432/moodify_test
           NEXTAUTH_SECRET: test-secret-for-e2e
           NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
@@ -182,6 +187,7 @@ jobs:
         run: npx playwright test
         env:
           DATABASE_URL: postgresql://test:test123@localhost:5432/moodify_test
+          DIRECT_URL: postgresql://test:test123@localhost:5432/moodify_test
           NEXTAUTH_SECRET: test-secret-for-e2e
           NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
