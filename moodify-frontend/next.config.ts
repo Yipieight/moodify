@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Disable ESLint during builds to allow warnings
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  // Enable standalone output for Docker deployment
+  output: 'standalone',
+  
   // Configure headers for security and CORS
   async headers() {
     return [

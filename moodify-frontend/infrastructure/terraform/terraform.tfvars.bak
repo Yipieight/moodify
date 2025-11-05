@@ -60,9 +60,9 @@ secrets = [
   }
 ]
 
-# Domain Configuration
-domain_name = "moodify.com"
-certificate_arn = "arn:aws:acm:us-east-1:539247485597:certificate/b44b3b3f-3455-40ae-9a86-a66fc1f46ec3"
+# Domain Configuration (optional)
+# domain_name = "moodify.yourdomain.com"
+# certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERTIFICATE_ID"
 
 # Monitoring Configuration
 enable_monitoring = true

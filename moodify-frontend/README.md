@@ -242,7 +242,33 @@ GET /api/history/analytics?timeRange=30
 
 ## 🚀 Deployment
 
-### Vercel (Recommended)
+### Docker (Recommended) 🐳
+
+**Quick Start:**
+```bash
+# 1. Configure environment
+cp env.example.txt .env
+# Edit .env with your Spotify credentials
+
+# 2. Deploy with one command
+./docker-deploy.sh
+```
+
+**What's Included:**
+- ✅ Supabase PostgreSQL Database (already configured!)
+- ✅ Redis for session storage
+- ✅ Health checks and monitoring
+- ✅ Production-ready configuration
+
+**Deployment Time:** ~3 minutes from zero to running! ⚡
+
+**Documentation:**
+- 📖 [Quick Start Guide](QUICK_START.md) - Get started in 3 minutes
+- 📘 [Complete Deployment Guide](DEPLOYMENT.md) - Full documentation
+- 📊 [Setup Summary](DOCKER_SETUP_SUMMARY.md) - Technical details
+- 📋 [Analysis Report](ANALYSIS_REPORT.md) - Configuration analysis
+
+### Vercel
 
 ```bash
 # Install Vercel CLI
@@ -265,8 +291,14 @@ npm start
 ### Environment Variables for Production
 
 ```env
+# Database (Supabase - already configured!)
+DATABASE_URL=postgresql://postgres:Moodify@dmin123@db.gsjwtbmiqmgvibvilwfr.supabase.co:5432/postgres
+
+# NextAuth
 NEXTAUTH_URL=https://your-domain.com
-NEXTAUTH_SECRET=your-production-secret
+NEXTAUTH_SECRET=your-production-secret  # Generate: openssl rand -base64 32
+
+# Spotify API
 NEXT_PUBLIC_SPOTIFY_CLIENT_ID=your-client-id
 SPOTIFY_CLIENT_SECRET=your-client-secret
 ```

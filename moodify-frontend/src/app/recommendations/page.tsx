@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Loading } from "@/components/ui/Loading"
 import { RecommendationList } from "@/components/music/RecommendationList"
@@ -27,7 +27,7 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-export default function RecommendationsPage() {
+function RecommendationsContent() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -249,5 +249,13 @@ export default function RecommendationsPage() {
         onClose={closeModal} 
       />
     </MainLayout>
+  )
+}
+
+export default function RecommendationsPage() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <RecommendationsContent />
+    </Suspense>
   )
 }

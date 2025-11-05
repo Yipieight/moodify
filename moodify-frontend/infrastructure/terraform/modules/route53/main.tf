@@ -16,8 +16,6 @@ resource "aws_route53_record" "main" {
     zone_id                = var.alb_zone_id
     evaluate_target_health = true
   }
-
-  tags = var.tags
 }
 
 # AAAA record for IPv6 (optional)
@@ -32,8 +30,6 @@ resource "aws_route53_record" "ipv6" {
     zone_id                = var.alb_zone_id
     evaluate_target_health = true
   }
-
-  tags = var.tags
 }
 
 # WWW subdomain (optional)
@@ -48,6 +44,4 @@ resource "aws_route53_record" "www" {
     zone_id                = var.alb_zone_id
     evaluate_target_health = true
   }
-
-  tags = var.tags
 }

@@ -5,14 +5,32 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:Moodify@dmin123@db.gsjwtbmiqmgvibvilwfr.supabase.co:5432/postgres}
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXTAUTH_URL=http://localhost:3000
+      # Database Configuration (Supabase)
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:Moodify@dmin123@db.gsjwtbmiqmgvibvilwfr.supabase.co:5432/postgres}
+      # NextAuth Configuration
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      # Spotify API Configuration
       - NEXT_PUBLIC_SPOTIFY_CLIENT_ID=${NEXT_PUBLIC_SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      # Email Configuration (Optional)
+      - EMAIL_SERVER_HOST=${EMAIL_SERVER_HOST}
+      - EMAIL_SERVER_PORT=${EMAIL_SERVER_PORT}
+      - EMAIL_SERVER_USER=${EMAIL_SERVER_USER}
+      - EMAIL_SERVER_PASSWORD=${EMAIL_SERVER_PASSWORD}
+      - EMAIL_FROM=${EMAIL_FROM}
+      # Redis Configuration (Optional)
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-moodify123}
+      # Application Configuration
+      - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_FACE_API_MODELS=/models
     volumes:
       # Mount public folder for face-api.js models
       - ./public:/app/public:ro
@@ -25,6 +43,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    depends_on:
+      - redis
 
   # Optional: Redis for session storage in production
   redis:

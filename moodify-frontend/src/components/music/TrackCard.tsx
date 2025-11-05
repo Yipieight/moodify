@@ -21,7 +21,6 @@ interface TrackCardProps {
   isCurrentTrack?: boolean
   onSaveTrack?: (track: Track) => void
   onTrackSelect?: (track: Track) => void
-  onSaveTrack?: (track: Track) => void
   onAddToPlaylist?: (track: Track) => void
   showIndex?: boolean
   index?: number

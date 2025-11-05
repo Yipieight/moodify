@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 
 // Enhanced CORS and auth middleware
-export function middleware(req) {
+export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   
   // Handle CORS preflight (OPTIONS) requests immediately

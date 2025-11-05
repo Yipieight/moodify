@@ -43,7 +43,9 @@ resource "aws_iam_role_policy" "ecs_execution_role_secrets" {
           "ssm:GetParametersByPath"
         ]
         Resource = [
+          "arn:aws:secretsmanager:*:*:secret:moodify/*",
           "arn:aws:secretsmanager:*:*:secret:${var.name_prefix}/*",
+          "arn:aws:ssm:*:*:parameter/moodify/*",
           "arn:aws:ssm:*:*:parameter/${var.name_prefix}/*"
         ]
       }

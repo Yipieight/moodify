@@ -7,10 +7,13 @@ WORKDIR /app
 # Install dependencies only when needed
 FROM base AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 
-# Install dependencies based on the preferred package manager
+# Copy package files and prisma schema (needed for postinstall hook)
 COPY package.json package-lock.json* pnpm-lock.yaml* ./
+COPY prisma ./prisma/
+
+# Install dependencies
 RUN \
   if [ -f pnpm-lock.yaml ]; then \
     corepack enable pnpm && pnpm i --frozen-lockfile; \
@@ -23,11 +26,25 @@ RUN \
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+
+    # Copy dependencies from deps stage (includes Prisma client in node_modules)
+    COPY --from=deps /app/node_modules ./node_modules
+    
+    # Copy all source files
 COPY . .
 
 # Environment variables for build
 ENV NEXT_TELEMETRY_DISABLED 1
+
+# Accept build-time environment variables
+ARG DATABASE_URL
+ARG NEXTAUTH_URL
+ARG NEXTAUTH_SECRET
+ARG NEXT_PUBLIC_SPOTIFY_CLIENT_ID
+ARG SPOTIFY_CLIENT_SECRET
+
+# Set environment variables for build
+ENV DATABASE_URL=${DATABASE_URL}
 
 # Build the application
 RUN \

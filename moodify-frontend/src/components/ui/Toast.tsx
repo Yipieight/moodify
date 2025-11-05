@@ -64,19 +64,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const addToast = (toast: Omit<Toast, 'id'>) => {
     const id = Math.random().toString(36).substr(2, 9)
+    const duration = toast.duration ?? 5000
     const newToast: Toast = {
       ...toast,
       id,
-      duration: toast.duration ?? 5000
+      duration
     }
     
     dispatch({ type: 'ADD_TOAST', toast: newToast })
 
     // Auto remove after duration
-    if (newToast.duration > 0) {
+    if (duration > 0) {
       setTimeout(() => {
         dispatch({ type: 'REMOVE_TOAST', id })
-      }, newToast.duration)
+      }, duration)
     }
   }
 

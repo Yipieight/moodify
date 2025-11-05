@@ -81,14 +81,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch user data from database
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
         name: true,
         email: true,
         image: true,
-        created_at: true,
+        createdAt: true,
       }
     })
 
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
         image: user.image,
         bio: "", // This would come from user preferences
         favoriteGenres: [], // This would come from user preferences
-        joinDate: user.created_at?.toISOString() || new Date().toISOString(),
+        joinDate: user.createdAt?.toISOString() || new Date().toISOString(),
       }
     })
 
@@ -222,7 +222,7 @@ export async function DELETE(request: NextRequest) {
                      'unknown'
 
     // Fetch user with password
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -290,16 +290,16 @@ export async function DELETE(request: NextRequest) {
         where: { user_id: userId },
       })
 
-      await tx.sessions.deleteMany({
-        where: { user_id: userId },
+      await tx.session.deleteMany({
+        where: { userId },
       })
 
-      await tx.accounts.deleteMany({
-        where: { user_id: userId },
+      await tx.account.deleteMany({
+        where: { userId },
       })
 
       // Finally delete user record
-      await tx.users.delete({
+      await tx.user.delete({
         where: { id: userId },
       })
     })
