@@ -31,12 +31,12 @@ describe('TrackCard Component', () => {
   it('should call onTrackSelect when clicked', () => {
     render(<TrackCard track={mockTrack} onTrackSelect={mockOnTrackSelect} />)
     
-    const card = screen.getByText('Test Song').closest('div')
-    if (card) {
-      fireEvent.click(card)
-      expect(mockOnTrackSelect).toHaveBeenCalledWith(mockTrack)
-      expect(mockOnTrackSelect).toHaveBeenCalledTimes(1)
-    }
+    // Click on the track name which has the onClick handler
+    const trackName = screen.getByText('Test Song')
+    fireEvent.click(trackName)
+    
+    expect(mockOnTrackSelect).toHaveBeenCalledWith(mockTrack)
+    expect(mockOnTrackSelect).toHaveBeenCalledTimes(1)
   })
 
   it('should display track image if available', () => {

@@ -33,9 +33,17 @@ const customJestConfig = {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!(@auth/prisma-adapter)/)',
+    '/node_modules/(?!(@auth/prisma-adapter|next)/)',
     '^.+\\.module\\.(css|sass|scss)$',
   ],
+  testEnvironment: 'jest-environment-jsdom',
+  globals: {
+    'ts-jest': {
+      tsconfig: {
+        jsx: 'react'
+      }
+    }
+  },
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

@@ -81,9 +81,9 @@ jobs:
           DATABASE_URL: postgresql://test:test123@localhost:5432/moodify_test
           DIRECT_URL: postgresql://test:test123@localhost:5432/moodify_test
 
-      - name: Run API tests
+      - name: Run integration tests
         working-directory: ./moodify-frontend
-        run: pnpm jest src/__tests__/integration/api/ --verbose || echo "No API tests found yet"
+        run: pnpm jest src/__tests__/integration/frontend/ --verbose
         env:
           DATABASE_URL: postgresql://test:test123@localhost:5432/moodify_test
           DIRECT_URL: postgresql://test:test123@localhost:5432/moodify_test
@@ -94,7 +94,7 @@ jobs:
 
       - name: Run unit tests
         working-directory: ./moodify-frontend
-        run: pnpm jest src/__tests__/unit/ --verbose || echo "No unit tests found yet"
+        run: pnpm jest src/__tests__/unit/ --verbose
 
       - name: Test summary
         if: always()
