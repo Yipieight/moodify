@@ -98,29 +98,29 @@ export function EmotionDisplay({
           <div className="text-6xl mb-4">{emoji}</div>
           
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 capitalize mb-2">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-900 capitalize mb-2">
               {primaryEmotion}
             </h2>
-            <p className="text-lg text-gray-700 mb-2">{description}</p>
+            <p className="text-lg text-gray-800 dark:text-gray-900 mb-2">{description}</p>
             <div className="flex items-center justify-center space-x-2">
-              <span className="text-2xl font-semibold text-gray-900">
+              <span className="text-2xl font-semibold text-gray-900 dark:text-gray-900">
                 {formatConfidence(confidence)}
               </span>
-              <span className="text-gray-600">confidence</span>
+              <span className="text-gray-700 dark:text-gray-900">confidence</span>
             </div>
           </div>
 
-          {/* Valence Indicator */}
-          <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-white">
+          {/* Valence Indicator - Updated to ensure visibility */}
+          <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-white bg-opacity-90 text-gray-800">
             <div className={`w-3 h-3 rounded-full mr-2 ${
               valence === 'positive' ? 'bg-green-500' :
               valence === 'negative' ? 'bg-red-500' : 'bg-gray-500'
             }`} />
-            <span className="capitalize">{valence} emotion</span>
+            <span className="capitalize font-medium">{valence} emotion</span>
           </div>
 
           {timestamp && (
-            <p className="text-sm text-gray-600 mt-4">
+            <p className="text-sm text-gray-600 dark:text-gray-700 mt-4">
               Analyzed {formatRelativeTime(timestamp)}
             </p>
           )}
