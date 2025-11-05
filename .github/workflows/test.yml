@@ -96,6 +96,10 @@ jobs:
         working-directory: ./moodify-frontend
         run: pnpm jest src/__tests__/unit/ --verbose
 
+      - name: Run infrastructure tests
+        working-directory: ./moodify-frontend
+        run: pnpm jest src/__tests__/infrastructure/ --verbose
+
       - name: Test summary
         if: always()
         run: |
