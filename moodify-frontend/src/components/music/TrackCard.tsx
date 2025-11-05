@@ -37,6 +37,7 @@ export function TrackCard({
   isCurrentTrack = false,
   onPlay,
   onPause,
+  onTrackSelect,
   onAddToPlaylist,
   onLike,
   isLiked = false,

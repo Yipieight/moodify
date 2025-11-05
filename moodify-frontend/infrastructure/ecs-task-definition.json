@@ -30,16 +30,24 @@
       ],
       "secrets": [
         {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:539247485597:secret:moodify/database-url-zpqR8U"
+        },
+        {
           "name": "NEXTAUTH_SECRET",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:moodify/nextauth-secret"
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:539247485597:secret:moodify/nextauth-secret-KVK7Y3"
+        },
+        {
+          "name": "NEXTAUTH_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:539247485597:secret:moodify/nextauth-url-uWwdSF"
         },
         {
           "name": "NEXT_PUBLIC_SPOTIFY_CLIENT_ID",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:moodify/spotify-client-id"
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:539247485597:secret:moodify/spotify-client-id-agtkHR"
         },
         {
           "name": "SPOTIFY_CLIENT_SECRET",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT_ID:secret:moodify/spotify-client-secret"
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:539247485597:secret:moodify/spotify-client-secret-O85QTs"
         }
       ],
       "logConfiguration": {
