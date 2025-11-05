@@ -65,12 +65,14 @@ jobs:
         run: npx prisma generate
         env:
           DATABASE_URL: postgresql://test:test123@localhost:5432/moodify_test
+          DIRECT_URL: postgresql://test:test123@localhost:5432/moodify_test
 
       - name: Push schema to test database
         working-directory: ./moodify-frontend
         run: npx prisma db push --skip-generate
         env:
           DATABASE_URL: postgresql://test:test123@localhost:5432/moodify_test
+          DIRECT_URL: postgresql://test:test123@localhost:5432/moodify_test
 
       - name: Run database tests
         working-directory: ./moodify-frontend
