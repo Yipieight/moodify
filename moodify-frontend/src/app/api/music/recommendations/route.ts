@@ -88,47 +88,8 @@ export async function POST(request: NextRequest) {
     // Get recommendations from Spotify
     const tracks = await spotifyService.getRecommendationsByEmotion(emotion, limit)
 
-    // Save the recommendation to database for analytics
-    try {
-      await prisma.music_recommendations.create({
-        data: {
-          user_id: userId,
-          emotion: emotion,
-          track_id: tracks[0]?.id || 'fallback',
-          track_name: tracks[0]?.name || 'Fallback Track',
-          artist_name: tracks[0]?.artist || 'Unknown Artist',
-          album_name: tracks[0]?.album || 'Unknown Album',
-          track_url: tracks[0]?.spotifyUrl || '',
-          image_url: tracks[0]?.imageUrl || '',
-          duration_ms: tracks[0]?.duration ? tracks[0].duration * 1000 : 0,
-          popularity: 50, // Default popularity
-          audio_features: {
-            emotion,
-            confidence,
-            tracksCount: tracks.length
-          }
-        }
-      })
-
-      // Update user statistics
-      await prisma.user_statistics.upsert({
-        where: { user_id: userId },
-        update: {
-          total_recommendations: { increment: 1 },
-          last_activity: new Date(),
-          calculated_at: new Date()
-        },
-        create: {
-          user_id: userId,
-          total_analyses: 0,
-          total_recommendations: 1,
-          last_activity: new Date()
-        }
-      })
-    } catch (dbError) {
-      console.error('Database error:', dbError)
-      // Continue with response even if DB save fails
-    }
+    // Note: Tracks are no longer automatically saved to history
+    // Users must manually save tracks using the "Save to History" button
 
     return NextResponse.json({
       success: true,
